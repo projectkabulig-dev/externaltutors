@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12284A">
+<title>ARAL Gain Tracker · SDO Romblon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Fredoka:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#12284A; --ink2:#46587A; --paper:#F2F5F9; --card:#FFFFFF; --line:#D6DDE8;
+  --sea:#0B7A86; --sea-d:#07555E; --sea-l:#E1F1F3; --sun:#F0B323; --sun-l:#FFF4D6; --coral:#D2473A; --coral-l:#FBE6E3; --leaf:#2D8A55; --leaf-l:#E1F3E8;
+  --r:12px; --body:'Atkinson Hyperlegible',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; --disp:'Fredoka','Atkinson Hyperlegible',system-ui,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45}
+body.noscroll{overflow:hidden}
+h1,h2{font-family:var(--disp);font-weight:600;margin:0;letter-spacing:.1px}
+h2{font-size:22px}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
+[hidden]{display:none!important}
+.sub{color:var(--ink2);margin:0;font-size:15px}.pad{padding:16px 4px}
+.hint{color:var(--ink2);font-size:14px;margin:0}
+.err{color:var(--coral);font-weight:700;margin:0;min-height:0}
+.err:empty{display:none}
+.warn{background:var(--sun-l);border-left:4px solid var(--sun);padding:10px 12px;border-radius:6px;margin:0;font-size:15px}
+.warn.big{padding:14px 14px;font-size:15px}.warn.big p{margin:6px 0 0}.or{display:flex;align-items:center;gap:10px;color:var(--ink2);font-size:14px;margin-top:4px}.or:before,.or:after{content:'';flex:1;height:1px;background:var(--line)}
+.codebox{background:var(--sea-l);border:2px solid var(--sea);border-radius:16px;padding:18px;text-align:center;display:flex;flex-direction:column;gap:4px}.codebox small{color:var(--sea-d);font-weight:700}.codebox strong{font-family:var(--disp);font-size:44px;letter-spacing:2px;color:var(--sea-d)}
+.hdr-r{display:flex;align-items:center;gap:8px;flex:none}.help{width:36px;height:36px;border-radius:50%;border:1.5px solid rgba(255,255,255,.7);background:transparent;color:#fff;font-weight:700;font-size:18px;cursor:pointer}
+.glyph{display:inline-flex;vertical-align:middle;flex:none}.legend{width:100%;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:8px 12px;cursor:pointer;text-align:left;font-size:14px}.legend span{display:inline-flex;align-items:center;gap:4px}.legend em{font-style:normal;color:var(--sea);font-weight:700;margin-left:auto}
+details{border:1px solid var(--line);border-radius:var(--r);background:#fff}summary{min-height:48px;display:flex;align-items:center;padding:0 14px;font-weight:700;cursor:pointer}.hbody{padding:0 14px 14px;display:flex;flex-direction:column;gap:10px}.hbody p{margin:0}.hbody ol{margin:0;padding-left:20px}
+.mrow{display:flex;gap:10px;align-items:flex-start}.mrow p{margin:2px 0 0;color:var(--ink2);font-size:15px}
+.loading{padding:40px;text-align:center;color:var(--ink2)}
+
+/* buttons */
+.btn{min-height:48px;padding:10px 16px;border-radius:var(--r);border:1.5px solid var(--ink);background:var(--card);font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-align:center}
+.btn:active{transform:translateY(1px)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn.primary{background:var(--sea);border-color:var(--sea);color:#fff}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--ink2)}
+.btn.danger{border-color:var(--coral);color:var(--coral)}
+.btn.good{background:var(--leaf);border-color:var(--leaf);color:#fff;font-size:20px;flex:1}
+.btn.bad{background:var(--card);border-color:var(--coral);color:var(--coral);font-size:20px;flex:1}
+.btn.mic{border-style:dashed;border-color:var(--ink2);color:var(--ink2);font-weight:400;align-self:center}
+.btn.wide{width:100%}
+.stack.tight{gap:8px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.two>.fld{min-width:0}
+
+/* forms */
+.fld{display:flex;flex-direction:column;gap:6px;min-width:0}
+.fld>span{font-weight:700;font-size:14px;color:var(--ink2)}
+input[type=text],input[type=password],input[type=search],input[type=number],input[type=date],select,textarea{width:100%;min-height:48px;padding:10px 12px;border:1.5px solid var(--line);border-radius:var(--r);background:#fff}
+textarea{min-height:140px;resize:vertical}
+input:focus,select:focus,textarea:focus{border-color:var(--sea);outline:none;box-shadow:0 0 0 3px var(--sea-l)}
+.chk{display:flex;gap:10px;align-items:center;font-size:15px}.chk input{width:22px;height:22px;accent-color:var(--sea)}
+.seg{display:flex;background:#E6EBF2;border-radius:var(--r);padding:4px;gap:4px}
+.seg button{flex:1;min-height:42px;border:0;background:transparent;border-radius:9px;font-weight:700;color:var(--ink2);cursor:pointer;padding:6px 8px}
+.seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 0 rgba(18,40,74,.12)}
+
+/* login */
+.login{max-width:440px;margin:0 auto;padding:28px 20px 40px;display:flex;flex-direction:column;gap:16px}
+.brand{display:flex;flex-direction:column;gap:6px;margin-bottom:6px}
+.brand h1{font-size:30px;line-height:1.1}.brand p{margin:0;color:var(--ink2)}
+.note{font-size:14px;color:var(--ink2);margin:0}
+
+/* shell */
+.top{position:sticky;top:0;z-index:20;background:var(--ink);color:#fff;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 16px;padding-top:calc(10px + env(safe-area-inset-top,0px))}
+.who{display:flex;flex-direction:column;min-width:0}.who strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.who span{font-size:13px;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pill{font-size:13px;font-weight:700;padding:5px 10px;border-radius:99px;white-space:nowrap}
+.pill.ok{background:rgba(255,255,255,.14);color:#fff}.pill.wait{background:var(--sun);color:var(--ink)}.pill.busy{background:var(--sea-l);color:var(--sea-d)}
+.main{max-width:600px;margin:0 auto;padding:16px 16px 110px}
+.stack{display:flex;flex-direction:column;gap:14px}
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--card);border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom,0px)}
+.tab{flex:1;border:0;background:transparent;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px 8px;font-size:13px;font-weight:700;color:var(--ink2);cursor:pointer;min-height:56px;border-top:3px solid transparent}
+.tab.on{color:var(--sea);border-top-color:var(--sea)}
+
+/* learners */
+.sumline{display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap;font-size:15px}.sumline span{color:var(--ink2)}
+.tools{display:flex;gap:10px}.tools input{flex:1}
+.list{display:flex;flex-direction:column;gap:8px}
+.row{width:100%;text-align:left;display:flex;align-items:center;gap:12px;padding:12px;background:var(--card);border:1px solid var(--line);border-left:5px solid var(--sea);border-radius:var(--r);cursor:pointer}
+.row.pull{border-left-color:var(--sun)}
+.av{flex:none;width:42px;height:42px;border-radius:50%;background:var(--sea-l);color:var(--sea-d);display:grid;place-items:center;font-weight:700;font-family:var(--disp)}
+.av.pull{background:var(--sun-l);color:#7A5600}
+.rn{flex:1;min-width:0;display:flex;flex-direction:column}.rn strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rn small{color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chips{display:flex;gap:6px;flex:none}
+.chip{font-style:normal;font-size:12px;font-weight:700;padding:3px 8px;border-radius:99px;border:1.5px solid var(--line);color:var(--ink2)}
+.chip.ok{background:var(--leaf-l);border-color:var(--leaf);color:var(--leaf)}.chip.bad{background:var(--coral-l);border-color:var(--coral);color:var(--coral)}
+.empty{text-align:center;padding:32px 12px;display:flex;flex-direction:column;gap:12px;align-items:center;background:var(--card);border:1px dashed var(--line);border-radius:var(--r)}.empty p{margin:0}
+
+/* sheet */
+#sheet{position:fixed;inset:0;z-index:40;display:flex;align-items:flex-end;justify-content:center}
+.sheet-back{position:absolute;inset:0;background:rgba(18,40,74,.5)}
+.sheet-box{position:relative;background:var(--card);width:100%;max-width:600px;max-height:92vh;overflow:auto;border-radius:20px 20px 0 0;padding:22px 18px calc(24px + env(safe-area-inset-bottom,0px))}
+.sheet-box .x{position:absolute;right:10px;top:8px;width:44px;height:44px;border:0;background:transparent;font-size:30px;line-height:1;color:var(--ink2);cursor:pointer}
+.sheet-box h2{padding-right:40px}
+table.mini{width:100%;border-collapse:collapse;font-size:14px}.mini th,.mini td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left}.mini thead th{color:var(--ink2);font-size:13px}
+
+/* tests */
+#test{position:fixed;inset:0;z-index:50;background:var(--paper);overflow:auto}
+.tview{max-width:600px;margin:0 auto;min-height:100%;display:flex;flex-direction:column}
+.ttop{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top,0px));background:var(--ink);color:#fff}
+.ttop div{display:flex;flex-direction:column}.ttop small{opacity:.8}.ttop .btn.ghost{color:#fff}
+.prog{height:6px;background:#DDE3EC}.prog i{display:block;height:100%;width:0;background:var(--sun);transition:width .25s}
+.tbody{flex:1;padding:18px 16px;display:flex;flex-direction:column;gap:16px}.tbody.scroll{overflow:visible}
+.cnt{color:var(--ink2);font-size:15px;font-weight:700}
+.q{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 16px;display:flex;flex-direction:column;gap:10px}
+.qt{font-family:var(--disp);font-size:34px;line-height:1.25;font-weight:500;word-break:break-word}
+.q .qt:only-child{text-align:center}
+.bigemo{font-size:30px;line-height:1.5;letter-spacing:2px;text-align:center}.bigemo.sm{font-size:20px;text-align:left}
+.fr{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;margin:0 3px;font-size:.78em;line-height:1.05}.fr span:first-child{border-bottom:2px solid currentColor;padding:0 3px 1px}.fr span:last-child{padding-top:1px}
+.answer{min-height:64px;background:#fff;border:2px solid var(--sea);border-radius:var(--r);font-family:var(--disp);font-size:36px;text-align:center;padding:6px 10px;word-break:break-all}
+.keys{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.key{min-height:58px;border-radius:var(--r);border:1.5px solid var(--line);background:#fff;font-family:var(--disp);font-size:26px;cursor:pointer}.key:active{background:var(--sea-l)}.key.del{background:#EEF1F6}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}.opts.sm{grid-template-columns:repeat(auto-fit,minmax(110px,1fr))}
+.opt{min-height:64px;border:2px solid var(--line);border-radius:var(--r);background:#fff;font-family:var(--disp);font-size:24px;cursor:pointer;padding:8px}.opt.on{border-color:var(--sea);background:var(--sea-l)}
+.tfoot{position:sticky;bottom:0;display:flex;gap:10px;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));background:var(--paper);border-top:1px solid var(--line)}
+.tfoot .btn{flex:1}
+.plist{display:flex;flex-direction:column;gap:10px}.prow{display:flex;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:10px}.pn{flex:none;width:30px;height:30px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;font-weight:700}.pq{flex:1;display:flex;flex-direction:column;gap:8px;font-size:18px}
+.score{text-align:center;display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 0}.score .big{font-family:var(--disp);font-size:56px;line-height:1.1}.score p{margin:0;color:var(--ink2)}
+.star{color:var(--sun);font-size:54px;line-height:1}
+.marks{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}.mk{min-width:44px;height:44px;padding:0 8px;border-radius:50%;display:grid;place-items:center;font-weight:700;border:2px solid}.mk.good{border-color:var(--leaf);color:var(--leaf);background:var(--leaf-l)}.mk.bad{border-color:var(--coral);color:var(--coral);background:var(--coral-l);border-radius:22px}
+.readtext{font-family:var(--disp);font-size:56px;text-align:center;padding:36px 8px;background:var(--card);border:1px solid var(--line);border-radius:16px;word-break:break-word;line-height:1.2}.readtext.long{font-size:30px;padding:28px 14px}
+.passage{font-size:24px;line-height:1.7;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+.stepper{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px}.stepper span{flex:1;font-size:15px;color:var(--ink2);font-weight:700}.stepper strong{min-width:34px;text-align:center;font-family:var(--disp);font-size:22px}.stepper .btn{min-width:48px;padding:0}
+.micbox{text-align:center;min-height:20px;color:var(--ink2)}
+.ladder{display:flex;flex-direction:column;gap:6px}.rung{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r);border:1.5px solid var(--line);background:var(--card)}.rung b{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--line);font-family:var(--disp)}.rung span{flex:1;font-weight:700}.rung em{font-style:normal;font-size:14px;color:var(--ink2)}
+.rung.good{border-color:var(--leaf);background:var(--leaf-l)}.rung.good b{background:var(--leaf);color:#fff}.rung.bad{border-color:var(--coral);background:var(--coral-l)}.rung.bad b{background:var(--coral);color:#fff}.rung.skip{opacity:.6}
+
+/* today */
+.srow{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}.srow.open{border-color:var(--sea)}
+.shead{width:100%;border:0;background:transparent;display:flex;align-items:center;gap:12px;padding:12px;text-align:left;cursor:pointer}
+.spanel{padding:4px 12px 14px;display:flex;flex-direction:column;gap:10px;background:#F8FAFC;border-top:1px solid var(--line)}
+.stat{padding:10px 12px;border-radius:10px;font-weight:700;text-align:center}.stat.perfect{background:var(--sun-l);color:#7A5600}.stat.redo{background:var(--coral-l);color:var(--coral)}
+
+/* report */
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px;display:flex;flex-direction:column;gap:2px}.stat-card small{color:var(--ink2);font-weight:700}.stat-card strong{font-family:var(--disp);font-size:26px;line-height:1.15}.stat-card span{font-size:13px;color:var(--ink2)}
+.scrollx{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:var(--r)}
+table.rep{border-collapse:collapse;width:100%;min-width:640px;font-size:14px}.rep th,.rep td{padding:8px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}.rep th:first-child{text-align:left;position:sticky;left:0;background:var(--card)}.rep thead th{font-size:12px;color:var(--ink2);text-align:right}.rep thead th:first-child{text-align:left}
+.rep td.up{color:var(--leaf);font-weight:700}.rep td.down{color:var(--coral);font-weight:700}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:8px 14px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px}.kv span{color:var(--ink2)}.kv strong{text-align:right;word-break:break-word}
+
+#toast{position:fixed;left:50%;bottom:90px;transform:translate(-50%,20px);background:var(--ink);color:#fff;padding:12px 16px;border-radius:12px;max-width:88vw;z-index:80;opacity:0;pointer-events:none;transition:.2s;text-align:center}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+#printRoot{display:none}
+
+@media print{
+  body.printing-test>*:not(#printRoot){display:none!important}
+  body.printing-test #printRoot{display:block!important;padding:0;color:#000;background:#fff}
+  body.printing-test{background:#fff}
+  .pitems{padding-left:22px;font-size:18px}.pitems li{margin-bottom:18px;break-inside:avoid}.pline{margin-top:6px}
+  #printRoot table{border-collapse:collapse;width:100%;font-size:11px}#printRoot th,#printRoot td{border:1px solid #888;padding:4px 6px;text-align:left}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media (min-width:700px){.main{padding-top:24px}.qt{font-size:40px}}
+input.answer{border:2px solid var(--sea);font-family:var(--disp);font-size:36px;text-align:center;min-height:64px;padding:6px 10px}input.answer[readonly]{cursor:default}
+.hint.center{text-align:center}
+/* Laptop and desktop: side menu, wider pages, centred dialogs, typing instead of the on-screen keypad */
+@media (min-width:900px){
+  :root{--hdr:62px}
+  body{font-size:17px}
+  .top{padding-left:28px;padding-right:28px}
+  .bar{top:var(--hdr);bottom:0;right:auto;width:220px;flex-direction:column;justify-content:flex-start;gap:4px;padding:16px 10px;border-top:0;border-right:1px solid var(--line)}
+  .tab{flex:none;flex-direction:row;justify-content:flex-start;gap:12px;min-height:48px;padding:8px 14px;font-size:16px;border-top:0;border-left:4px solid transparent;border-radius:10px}
+  .tab.on{border-left-color:var(--sea);background:var(--sea-l)}
+  .main{max-width:none;margin:0 0 0 220px;padding:28px 40px 56px}
+  .main>.stack{max-width:1040px}
+  .list{display:grid;grid-template-columns:1fr 1fr;gap:10px}.list .empty,.list .pad{grid-column:1/-1}
+  .cards{grid-template-columns:repeat(4,1fr)}
+  table.rep{min-width:0}
+  #sheet{align-items:center}.sheet-box{border-radius:20px;max-width:580px;max-height:88vh}
+  .tview{max-width:760px}.qt{font-size:46px}.readtext{font-size:80px}.readtext.long{font-size:36px}.passage{font-size:28px}
+  .login{margin-top:48px}
+  #toast{bottom:36px}
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="sheet" hidden></div>
+<div id="test" hidden></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="printRoot"></div>
+<script>
+const SCHOOLS = {"Alcantara": ["Agbay-Ang IS", "Alcantara CES", "Alcantara NHS", "Bagsik ES", "Bonlao ES", "Calagonsao ES", "Camili ES", "Comod-Om ES", "Don Manuel L. Solidum MES", "Felipe Madali MES", "Gui-ob ES", "Melodias Imperial Sr. NHS", "San Isidro ES", "San Roque ES (Alcantara)", "Tugdan NHS"], "Banton": ["Balogo ES (Banton)", "Banice ES", "Banton CES", "Banton NHS", "Libtong ES", "Nasunogan ES", "Tan-ag ES", "Tumalum-Lagang ES", "Tungonan ES", "Tungonan NHS"], "Cajidiocan-Magdiwang": ["Agsao ES", "Agutay ES", "Agutay NHS", "Ambulong ES (Cajidiocan-Magdiwang)", "Angel Rio ES", "Cajidiocan CES", "Cajidiocan NHS", "Camanglad ES", "Cambajao ES", "Cambalo ES", "Cambalo NHS", "Cambijang ES", "Cantagda ES", "Damaso Ramilo MES", "Danao ES", "Danao NHS", "Dulangan ES", "Gutivan ES", "Haguimit Cultural Minority School", "Ipil ES", "Jao-Asan ES", "Lumbang East NHS", "Lumbang West ES", "Magdiwang ES", "Magdiwang NHS", "Marigondon ES", "Panaguintingan ES", "Silum ES", "Taguilos ES", "Tampayan ES", "Tomas & Maria T. Maglaya MS"], "Concepcion": ["Agbatang PS", "Bakhawan ES", "Bakhawan NHS", "Calabasahan ES", "Concepcion CS", "Concepcion NHS", "Dalajican ES", "Masadya PS", "Masudsud ES", "Sampong ES", "San Vicente ES (Concepcion)"], "Corcuera": ["Alegria ES", "Ambulong ES (Corcuera)", "Colong-Colong ES", "Corcuera CES", "Corcuera NHS", "Gobon ES", "Ilijan ES", "Labnig ES", "Mabini ES (Corcuera)", "Mabini NHS", "Mahaba ES", "Mangansag ES", "Mauricio F. Fabito NHS", "San Roque ES (Corcuera)", "San Vicente ES (Corcuera)", "Tacasan ES"], "Looc": ["Agojo IS", "Balatucan ES", "Buenavista ES (Looc)", "Buenavista NHS", "Crispin Grimares ES", "Gov. Gonzales ES", "Guinhaya-An IS", "Jose M. Solis ES", "Limon Norte ES", "Limon Norte NHS", "Limon Sur ES", "Looc CES", "Looc NHS", "Manhac ES", "Pili ES", "Punta ES"], "Odiongan North": ["Aurora ES", "Boliganay ES", "Budiong ES", "Canduyong ES", "Canlumay Cultural CS", "Gabawan ES", "Gabawan NHS", "Libertad ES", "Libertad NHS", "Odiongan North CS", "Palati PS", "Panique ES", "Pato-o IS", "Poctoy-Baito ES", "Tuburan ES", "Tumingad ES"], "Odiongan South": ["Agnocnoc ES", "Amatong ES", "Anahao IS", "Bagulayag ES", "Bangon ES", "Bunsoran ES", "Claro M. Recto ES", "Ferrol CES", "Ferrol NHS", "Hinag-oman ES", "Malilico ES", "Mayha ES", "Mayha NHS", "Odiongan NHS", "Odiongan South CES", "Paulino F. Fabon Sr. MS", "Progreso Este ES", "Progreso Oeste ES", "Rizal ES", "Tabobo-an ES", "Tubigon ES", "Tulay ES"], "Romblon": ["Agbaluto ES", "Agnaga ES", "Agnay ES", "Agnipa ES", "Agnipa NHS", "Agpanabat ES", "Agtongo ES", "Alad Lamao ES", "Alad NHS", "Alad Recudo ES", "Bagacay ES", "Cajimos ES", "Calabogo ES", "Cobrador ES", "Cogon ES", "Ginablan ES", "Guimpingan ES", "Ilauran ES", "Lamao ES", "Li-O ES", "Li-O NHS", "Logbon ES", "Lonos ES", "Lunas ES", "Macario Molina NHS", "Maximino Mazo Motin ES", "Palje PS", "Romblon East CS", "Romblon NHS", "Romblon West CS", "Sablayan ES", "Sablayan NHS", "San Jose ES", "Sawang ES", "Timla ES"], "San Agustin-Santa Maria-Calatrava": ["Alfredo P. Navarette MS", "Balogo ES (San Agustin-Santa Maria-Calatrava)", "Bonga ES", "Buli ES", "Cabibihan ES", "Cabolutan ES", "Cabolutan NHS", "Calatrava ES", "Calatrava NHS", "Camantaya ES", "Carmen ES", "Carmen NHS", "Cawayan ES", "Concepcion Norte ES", "Concepcion Sur ES", "Doña Juana ES", "Eduardo M. Moreno NHS", "Esteban Madrona NHS", "Esteban Minon Madrona ES", "Fetalvero-Mingoa MS", "Hinugusan ES", "Josefina Fetalino Malayo ES", "Linao ES", "Long Beach ES", "Luis M. Abello Sr. PS", "Pagsangahan ES", "Pang-Alaalang Paaralang Severina M. Solidum", "Paroyhog ES", "Pascual Catajay Linao NHS", "San Agustin CES", "San Agustin NTS", "Santa Maria NHS", "Sto. Nino NHS", "Sto. Niño ES", "Sugod ES", "Talamban ES", "Talisay IS", "Victorio Sixon Balogo NHS"], "San Andres": ["Agpudlos ES", "Ben G. Talamisan MS", "Calunacon ES", "Dona Martina F. Ganan MS", "Geminiano Galicia Sr. MS", "Linawan IS", "Marigondon Norte IS", "Marigondon Sur ES", "Matutuna ES", "Nemesio N. Ganan III MS", "San Andres CES", "San Andres Cultural HS", "San Andres NHS", "Tan-Agan ES", "Tanagan NHS", "Victoria ES"], "San Fernando": ["Agtiwa ES", "Armin Rios-Marin NHS", "Azagra ES", "Azagra NHS", "Campalingo ES", "Canjalon ES", "Don Carlos MMMNHS", "Espana NHS", "España ES", "Layag Cultural Minority School", "Mabini ES (San Fernando)", "Mabulo ES", "Otod ES", "San Fernando ES", "Taclobo ES", "Teresa Bernas MS"], "San Jose-Santa Fe": ["Agmanic ES", "Agripino Armedilla NHS", "Buenavista ES (San Jose-Santa Fe)", "Busay ES", "Canyayo ES", "Combot ES", "Danao Sur ES", "Guinbirayan ES", "Guinbirayan NHS", "Guinpoingan ES", "Guintigbasan ES", "Inihawan ES", "Lamberto Antaran MS", "Lanas ES", "Lindero IS", "Magsaysay ES", "Mat-I ES", "Pandan ES", "Pinamihagan ES", "Pinamihagan NHS", "San Jose AHS", "San Jose CS", "Santa Fe CES", "Santa Fe Senior High School", "Silvino G. Gajarion ES", "Sta. Fe NHS", "Tabugon ES", "Trangquilino Cawaling Sr. NHS", "V. A. Gutierrez Montiel MES"], "Practice mode (works without internet)": ["Sample Elementary School", "Sample National High School"]};
+
+/* ================= RANDOM + MATH HELPERS ================= */
+const MINUS = '\u2212';
+function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function mkR(seed) {
+  const f = mulberry32(seed);
+  const r = () => f();
+  r.int = (a, b) => a + Math.floor(f() * (b - a + 1));
+  r.pick = arr => arr[Math.floor(f() * arr.length)];
+  r.shuffle = arr => { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(f() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  r.sign = () => (f() < 0.5 ? -1 : 1);
+  return r;
+}
+const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) { [a, b] = [b, a % b]; } return a || 1; };
+const fmtInt = n => (n < 0 ? MINUS : '') + Math.abs(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+const par = n => (n < 0 ? '(' + MINUS + Math.abs(n) + ')' : String(n));
+const parD = (v, dp) => (v < 0 ? '(' + MINUS + Math.abs(v).toFixed(dp) + ')' : v.toFixed(dp));
+const Q = (n, d = 1) => { if (d < 0) { n = -n; d = -d; } const g = gcd(n, d); return { n: n / g, d: d / g }; };
+const qadd = (x, y) => Q(x.n * y.d + y.n * x.d, x.d * y.d);
+const qsub = (x, y) => Q(x.n * y.d - y.n * x.d, x.d * y.d);
+const qmul = (x, y) => Q(x.n * y.n, x.d * y.d);
+const qdiv = (x, y) => Q(x.n * y.d, x.d * y.n);
+const qStr = x => (x.d === 1 ? String(x.n) : x.n + '/' + x.d);
+const qVal = x => x.n / x.d;
+const fTok = x => (x.d === 1 ? String(x.n) : '{' + x.n + '/' + x.d + '}');
+const fTokS = x => (x.n < 0 ? '(' + MINUS + (x.d === 1 ? String(-x.n) : '{' + (-x.n) + '/' + x.d + '}') + ')' : fTok(x));
+const hasCarry = (a, b) => { let c = 0; while (a > 0 || b > 0 || c > 0) { const s = (a % 10) + (b % 10) + c; if (s >= 10) return true; c = 0; a = Math.floor(a / 10); b = Math.floor(b / 10); } return false; };
+const hasBorrow = (a, b) => { let br = 0; while (a > 0 || b > 0) { const da = (a % 10) - br; const db = b % 10; if (da < db) return true; br = 0; a = Math.floor(a / 10); b = Math.floor(b / 10); } return false; };
+function pickPair(r, p, test) {
+  for (let k = 0; k < 400; k++) { const a = r.int(p.a[0], p.a[1]); const b = r.int(p.b[0], p.b[1]); if (test(a, b)) return [a, b]; }
+  return [r.int(p.a[0], p.a[1]), r.int(p.b[0], p.b[1])];
+}
+const ONES = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+const TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+function numToWords(n) { if (n < 20) return ONES[n]; const t = Math.floor(n / 10), o = n % 10; return TENS[t] + (o ? '-' + ONES[o] : ''); }
+const NAMES = [{ n: 'Ana', p: 'She' }, { n: 'Lito', p: 'He' }, { n: 'Maria', p: 'She' }, { n: 'Jun', p: 'He' }, { n: 'Liza', p: 'She' }, { n: 'Ramil', p: 'He' }, { n: 'Nena', p: 'She' }, { n: 'Dodong', p: 'He' }];
+const THINGS = ['mangoes', 'candies', 'marbles', 'stickers', 'pencils', 'bananas'];
+const num = (q, a, extra) => Object.assign({ q, a: String(a), v: Number(a), t: 'num' }, extra || {});
+
+/* ================= ITEM GENERATORS ================= */
+const GEN = {
+  count(r) { const n = r.int(3, 15); const e = r.pick(['🍎', '🐟', '⭐', '🥭', '🐢', '🌺', '🐓', '🛶']); return num('How many are there?', n, { big: Array(n).fill(e).join(' ') }); },
+  seq(r, p, i) {
+    if (i % 2 === 0) { if (r.int(0, 1)) { const n = r.int(3, 48); return num('What number comes after ' + n + '?', n + 1); } const n = r.int(4, 49); return num('What number comes before ' + n + '?', n - 1); }
+    if (r.int(0, 1)) { const s = r.int(2, 40); return num(s + ', ' + (s + 1) + ', ___, ' + (s + 3), s + 2); }
+    const s = 2 * r.int(1, 20); return num(s + ', ' + (s + 2) + ', ___, ' + (s + 6), s + 4);
+  },
+  cmp(r, p, i) {
+    let a, b; do { a = r.int(1, 99); b = r.int(1, 99); } while (a === b || Math.abs(a - b) < 2);
+    const greater = i % 2 === 0; const ans = greater ? Math.max(a, b) : Math.min(a, b);
+    return { q: greater ? 'Which number is greater?' : 'Which number is less?', t: 'mc', opts: r.shuffle([String(a), String(b)]), a: String(ans), v: null };
+  },
+  numword(r) {
+    let n; do { n = r.int(21, 98); } while (n % 10 === 0);
+    const sw = (n % 10) * 10 + Math.floor(n / 10); const cands = [numToWords(n), numToWords(sw), numToWords(n + 10 > 99 ? n - 10 : n + 10), numToWords(n % 10 === 9 ? n - 1 : n + 1)];
+    const opts = []; cands.forEach(c => { if (c && !opts.includes(c)) opts.push(c); });
+    return { q: 'Which is the number word for ' + n + '?', t: 'mc', opts: r.shuffle(opts.slice(0, 4)), a: numToWords(n), v: null };
+  },
+  add(r, p) {
+    const [a, b] = pickPair(r, p, (x, y) => (p.max ? x + y <= p.max : true) && (p.regroup === true ? hasCarry(x, y) : p.regroup === false ? !hasCarry(x, y) : true));
+    return num(fmtInt(a) + ' + ' + fmtInt(b) + ' =', a + b);
+  },
+  sub(r, p) {
+    const [a, b] = pickPair(r, p, (x, y) => x > y && (p.regroup === true ? hasBorrow(x, y) : p.regroup === false ? !hasBorrow(x, y) : true));
+    return num(fmtInt(a) + ' ' + MINUS + ' ' + fmtInt(b) + ' =', a - b);
+  },
+  mul(r, p) { const a = r.int(p.a[0], p.a[1]), b = r.int(p.b[0], p.b[1]); return num(fmtInt(a) + ' \u00D7 ' + fmtInt(b) + ' =', a * b); },
+  div(r, p) { const d = r.int(p.d[0], p.d[1]), qq = r.int(p.q[0], p.q[1]); return num(fmtInt(d * qq) + ' \u00F7 ' + d + ' =', qq); },
+  'dec:add'(r, p) { const sc = Math.pow(10, p.dp); const A = r.int(150, 9000), B = r.int(150, 5000); return num((A / sc).toFixed(p.dp) + ' + ' + (B / sc).toFixed(p.dp) + ' =', ((A + B) / sc).toFixed(p.dp)); },
+  'dec:sub'(r, p) { const sc = Math.pow(10, p.dp); let A = r.int(2000, 9900), B = r.int(150, 1900); return num((A / sc).toFixed(p.dp) + ' ' + MINUS + ' ' + (B / sc).toFixed(p.dp) + ' =', ((A - B) / sc).toFixed(p.dp)); },
+  'dec:mul'(r, p) { const A = r.int(12, 99), w = r.int(p.w[0], p.w[1]); return num((A / 10).toFixed(1) + ' \u00D7 ' + w + ' =', ((A * w) / 10).toFixed(1)); },
+  'dec:div'(r, p) { const w = r.int(p.w[0], p.w[1]), Qv = r.int(12, 99); return num(((Qv * w) / 10).toFixed(1) + ' \u00F7 ' + w + ' =', (Qv / 10).toFixed(1)); },
+  'frac:add'(r) { return fracBin(r, 'add', false, 0); },
+  'frac:sub'(r) { return fracBin(r, 'sub', false, 0); },
+  'frac:mul'(r, p, i) { return fracBin(r, 'mul', false, i); },
+  'frac:div'(r, p, i) { return fracBin(r, 'div', false, i); },
+  'sfrac:add'(r) { return fracBin(r, 'add', true, 0); },
+  'sfrac:sub'(r) { return fracBin(r, 'sub', true, 0); },
+  'sfrac:mul'(r, p, i) { return fracBin(r, 'mul', true, 0); },
+  'sfrac:div'(r, p, i) { return fracBin(r, 'div', true, 0); },
+  'int:add'(r) { const [a, b] = signedPair(r, 2, 40); return num(par(a) + ' + ' + par(b) + ' =', a + b); },
+  'int:sub'(r) { const [a, b] = signedPair(r, 2, 40); return num(par(a) + ' ' + MINUS + ' ' + par(b) + ' =', a - b); },
+  'int:mul'(r) { const [a, b] = signedPair(r, 2, 12); return num(par(a) + ' \u00D7 ' + par(b) + ' =', a * b); },
+  'int:div'(r) { const [x, d] = signedPair(r, 2, 12); const q = x; return num(par(q * d) + ' \u00F7 ' + par(d) + ' =', q); },
+  'sdec:add'(r) { const [A, B] = signedPair(r, 11, 99); return num(parD(A / 10, 1) + ' + ' + parD(B / 10, 1) + ' =', ((A + B) / 10).toFixed(1)); },
+  'sdec:sub'(r) { const [A, B] = signedPair(r, 11, 99); return num(parD(A / 10, 1) + ' ' + MINUS + ' ' + parD(B / 10, 1) + ' =', ((A - B) / 10).toFixed(1)); },
+  'sdec:mul'(r) { const [A, B] = signedPair(r, 12, 59); return num(parD(A / 10, 1) + ' \u00D7 ' + parD(B / 10, 1) + ' =', ((A * B) / 100).toFixed(2)); },
+  'sdec:div'(r) { const [Qq, B] = signedPair(r, 2, 12); const bt = Math.abs(B) + 10; const bs = B < 0 ? -bt : bt; const A = Qq * bs; return num(parD(A / 10, 1) + ' \u00F7 ' + parD(bs / 10, 1) + ' =', Qq); },
+  expr(r, p, i, level) { return (level === 9 ? EXPR9 : EXPR10)[i](r); },
+  wp(r, p, i, level) { const L = WP[wpTier(level)]; return (i === 0 ? r.pick(L.one) : r.pick(L.two))(r); }
+};
+function signedPair(r, lo, hi) {
+  for (let k = 0; k < 100; k++) { const a = r.sign() * r.int(lo, hi), b = r.sign() * r.int(lo, hi); if (a < 0 || b < 0) return [a, b]; }
+  return [-r.int(lo, hi), r.int(lo, hi)];
+}
+function fracBin(r, op, signed, i) {
+  const pairs = [[2, 4], [3, 6], [2, 3], [3, 4], [4, 8], [5, 10], [2, 6], [4, 6], [3, 5], [2, 5]];
+  const mk = d => ({ n: r.int(1, d - 1), d });
+  const sg = x => (signed && r.int(0, 1) ? Q(-x.n, x.d) : x);
+  let x, y, res, q;
+  const T = signed ? fTokS : fTok;
+  if (op === 'add' || op === 'sub') {
+    const pr = r.shuffle(pairs[r.int(0, pairs.length - 1)]); x = sg(mk(pr[0])); y = sg(mk(pr[1]));
+    if (!signed && op === 'sub' && qVal(x) <= qVal(y)) { const t = x; x = y; y = t; }
+    if (op === 'add') { res = qadd(x, y); q = T(x) + ' + ' + T(y) + ' ='; } else { res = qsub(x, y); q = T(x) + ' ' + MINUS + ' ' + T(y) + ' ='; }
+    if (signed && !(x.n < 0 || y.n < 0)) { x = Q(-x.n, x.d); res = op === 'add' ? qadd(x, y) : qsub(x, y); q = T(x) + (op === 'add' ? ' + ' : ' ' + MINUS + ' ') + T(y) + ' ='; }
+    return num(q, qStr(res), { t: 'frac', v: qVal(res) });
+  }
+  const d1 = r.pick([2, 3, 4, 5, 6, 8]), d2 = r.pick([2, 3, 4, 5, 6, 8]);
+  x = sg(mk(d1)); y = sg(mk(d2));
+  if (signed && x.n > 0 && y.n > 0) x = Q(-x.n, x.d);
+  if (op === 'mul') {
+    if (!signed && i === 2) { const w = r.int(2, 9); res = qmul(x, Q(w, 1)); q = T(x) + ' \u00D7 ' + w + ' ='; } else { res = qmul(x, y); q = T(x) + ' \u00D7 ' + T(y) + ' ='; }
+  } else {
+    if (!signed && i === 1) { const w = r.int(2, 9); res = qdiv(Q(w, 1), x); q = w + ' \u00F7 ' + T(x) + ' ='; }
+    else if (!signed && i === 2) { const w = r.int(2, 9); res = qdiv(x, Q(w, 1)); q = T(x) + ' \u00F7 ' + w + ' ='; }
+    else { res = qdiv(x, y); q = T(x) + ' \u00F7 ' + T(y) + ' ='; }
+  }
+  return num(q, qStr(res), { t: 'frac', v: qVal(res) });
+}
+const E = (q, v) => num(q + ' =', v);
+const EXPR9 = [
+  r => { const a = r.int(2, 12), b = r.int(2, 9), c = r.int(2, 9); return E(a + ' + ' + b + ' \u00D7 ' + c, a + b * c); },
+  r => { const a = r.int(3, 12), b = r.int(3, 9), c = r.int(2, a * b - 1 > 20 ? 20 : a * b - 1); return E(a + ' \u00D7 ' + b + ' ' + MINUS + ' ' + c, a * b - c); },
+  r => { const a = r.int(2, 15), b = r.int(2, 15), c = r.int(2, 9); return E('(' + a + ' + ' + b + ') \u00D7 ' + c, (a + b) * c); },
+  r => { const c = r.int(2, 9), k = r.int(2, 12), b = r.int(1, 30); return E('(' + (b + c * k) + ' ' + MINUS + ' ' + b + ') \u00F7 ' + c, k); },
+  r => { const b = r.int(5, 25), c = r.int(5, 25), a = r.int(b + c + 1, b + c + 60); return E(a + ' ' + MINUS + ' (' + b + ' + ' + c + ')', a - b - c); },
+  r => { const d = r.int(2, 9), q = r.int(2, 12), c = r.int(3, 30); return E(d * q + ' \u00F7 ' + d + ' + ' + c, q + c); },
+  r => { const c = r.int(2, 6), d = r.int(2, 6), a = r.int(20, 60), b = r.int(10, 40); return E(a + ' + ' + b + ' ' + MINUS + ' ' + c + ' \u00D7 ' + d, a + b - c * d); },
+  r => { const a = r.int(2, 12), b = r.int(2, 9), c = r.int(2, 9); return E('(' + MINUS + a + ') + ' + b + ' \u00D7 ' + c, -a + b * c); },
+  r => { const a = r.int(2, 9), b = r.int(2, 9), c = r.int(10, 60); return E(a + ' \u00D7 (' + MINUS + b + ') + ' + c, -a * b + c); },
+  r => { const c = r.int(2, 6), k = r.int(3, 12), a = r.int(1, c * k - 1), d = r.int(1, k - 1); return E('(' + a + ' + ' + (c * k - a) + ') \u00F7 ' + c + ' ' + MINUS + ' ' + d, k - d); }
+];
+const EXPR10 = [
+  r => { const a = r.int(2, 9), b = r.int(2, 9), c = r.int(2, 9); return E(a + '\u00B2 + ' + b + ' \u00D7 ' + c, a * a + b * c); },
+  r => { const a = r.int(1, 6), b = r.int(1, 6), c = r.int(1, 20); return E('(' + a + ' + ' + b + ')\u00B2 ' + MINUS + ' ' + c, (a + b) * (a + b) - c); },
+  r => { const c = r.int(2, 6), m = r.int(1, 5), b = r.int(2, 6); return E(c * m + ' \u00D7 ' + b + '\u00B2 \u00F7 ' + c, m * b * b); },
+  r => { const a = r.int(2, 5), b = r.int(2, Math.max(2, Math.floor(Math.sqrt(a * a * a)))); return E(a + '\u00B3 ' + MINUS + ' ' + b + '\u00B2', a * a * a - b * b); },
+  r => { const a = r.int(2, 12), b = r.int(1, 50); return E('(' + MINUS + a + ')\u00B2 + ' + b, a * a + b); },
+  r => { const a = r.int(2, 4), b = r.int(2, 9), c = r.int(2, 9); return E('(' + MINUS + a + ')\u00B3 + ' + b + ' \u00D7 ' + c, -a * a * a + b * c); },
+  r => { const a = r.int(5, 30), b = r.int(2, 9), c = r.int(1, 30); return E(a + ' + ' + b + '\u00B2 ' + MINUS + ' ' + c, a + b * b - c); },
+  r => { const a = r.int(6, 15), b = r.int(1, 5), c = r.int(2, 5); return E('(' + a + ' ' + MINUS + ' ' + b + ')\u00B2 \u00D7 ' + c, (a - b) * (a - b) * c); },
+  r => { const s = r.int(4, 15), b = r.int(2, 9), c = r.int(2, 9); return E('\u221A' + s * s + ' + ' + b + ' \u00D7 ' + c, s + b * c); },
+  r => { const b = r.int(2, 6), m = r.int(2, 5), c = r.int(1, 10); return E(b * m + '\u00B2 \u00F7 ' + b + ' ' + MINUS + ' ' + c, b * m * m - c); }
+];
+
+/* ---------- Word problems ---------- */
+function wpTier(level) { return level === 2 ? 'T1' : level <= 4 ? 'T2' : level === 5 ? 'T3a' : level === 6 ? 'T3b' : level <= 8 ? 'T4' : 'T5'; }
+const nm = r => r.pick(NAMES);
+const WP = {
+  T1: {
+    one: [
+      r => { const s = nm(r), t = r.pick(THINGS), a = r.int(12, 45), b = r.int(10, 40); return num(s.n + ' had ' + a + ' ' + t + '. ' + s.p + ' got ' + b + ' more. How many ' + t + ' does ' + s.n + ' have now?', a + b); },
+      r => { const s = nm(r), t = r.pick(THINGS), a = r.int(40, 90), b = r.int(11, 29); return num(s.n + ' had ' + a + ' ' + t + '. ' + s.p + ' gave ' + b + ' to a friend. How many ' + t + ' are left?', a - b); }
+    ],
+    two: [
+      r => { const s = nm(r), t = r.pick(THINGS), a = r.int(20, 40), b = r.int(10, 30), c = r.int(5, 19); return num(s.n + ' bought ' + a + ' ' + t + ' in the morning and ' + b + ' in the afternoon. ' + s.p + ' gave away ' + c + '. How many ' + t + ' are left?', a + b - c); },
+      r => { const a = r.int(15, 25), b = r.int(15, 25), c = r.int(2, 9); return num('There are ' + a + ' boys and ' + b + ' girls in a class. ' + c + ' pupils are absent. How many pupils are present?', a + b - c); }
+    ]
+  },
+  T2: {
+    one: [
+      r => { const t = r.pick(THINGS), a = r.int(6, 25), b = r.int(3, 9); return num('Each box has ' + a + ' ' + t + '. How many ' + t + ' are in ' + b + ' boxes?', a * b); },
+      r => { const t = r.pick(THINGS), k = r.int(3, 9), q = r.int(5, 30); return num(k * q + ' ' + t + ' are shared equally among ' + k + ' children. How many does each child get?', q); }
+    ],
+    two: [
+      r => { const b = r.int(5, 15), d = r.int(3, 6), e = r.int(20, 80); return num('A store had ' + (b * d + e) + ' bottles of water. It sold ' + b + ' bottles each day for ' + d + ' days. How many bottles are left?', e); },
+      r => { const s = nm(r), a = r.int(10, 50), d = r.int(4, 9), c = r.int(5, a * d - 10); return num(s.n + ' saves \u20B1' + a + ' every day for ' + d + ' days. ' + s.p + ' then spends \u20B1' + c + '. How much money is left?', a * d - c); }
+    ]
+  },
+  T3a: {
+    one: [
+      r => { const a = r.int(15, 45) / 10, k = r.int(4, 9); return num('A bottle holds ' + a.toFixed(1) + ' liters of water. How many liters are in ' + k + ' bottles?', ((a * 10 * k) / 10).toFixed(1)); },
+      r => { const a = r.int(60, 99) / 10, b = r.int(11, 49) / 10; return num('A rope is ' + a.toFixed(1) + ' m long. ' + nm(r).n + ' cuts off ' + b.toFixed(1) + ' m. How long is the remaining rope in meters?', ((a * 10 - b * 10) / 10).toFixed(1)); }
+    ],
+    two: [
+      r => { const p = r.pick([42.5, 48.5, 52.5, 36.5, 44.5]), k = r.int(2, 5), pay = 500; return num('Rice costs \u20B1' + p.toFixed(2) + ' per kilo. ' + nm(r).n + ' buys ' + k + ' kilos and pays with a \u20B1' + pay + ' bill. How much is the change?', ((pay * 100 - p * 100 * k) / 100).toFixed(2)); },
+      r => { const a = r.int(12, 29) / 10, b = r.int(12, 29) / 10, k = r.int(2, 6); return num('A ribbon is ' + a.toFixed(1) + ' m long and another is ' + b.toFixed(1) + ' m long. How many meters of ribbon are there in ' + k + ' sets of both?', (((a * 10 + b * 10) * k) / 10).toFixed(1)); }
+    ]
+  },
+  T3b: {
+    one: [
+      r => { const d = r.pick([5, 6, 8, 10, 12]), a = r.int(1, Math.floor(d / 2) - 0 || 1), b = r.int(1, Math.max(1, Math.floor(d / 2) - 1)); const s = qadd(Q(a, d), Q(b, d)); return num(nm(r).n + ' ate ' + '{' + a + '/' + d + '}' + ' of a cake and ' + nm(r).n + ' ate ' + '{' + b + '/' + d + '}' + ' of the same cake. How much of the cake did they eat together?', qStr(s), { t: 'frac', v: qVal(s) }); },
+      r => { const a = r.int(2, 5), b = r.int(2, 7), k = r.int(3, 9); return num('The ratio of boys to girls in a group is ' + a + ':' + b + '. If there are ' + a * k + ' boys, how many girls are there?', b * k); }
+    ],
+    two: [
+      r => { const k = r.pick([3, 4, 5, 6]), m = r.int(4, 12), s = nm(r); return num(s.n + ' has ' + k * m + ' stickers. ' + s.p + ' gives {1/' + k + '} of them to a friend. How many stickers does ' + s.n + ' have left?', k * m - m); },
+      r => { const N = r.pick([200, 300, 400, 500, 600]), pct = r.pick([20, 25, 40, 50, 60]); return num('A school has ' + N + ' pupils. ' + pct + '% of them are girls. How many boys are there?', N - (N * pct) / 100); }
+    ]
+  },
+  T4: {
+    one: [
+      r => { const a = -r.int(2, 9), b = r.int(5, 15); return num('The temperature in Baguio was ' + a + '\u00B0C at night. By noon it rose by ' + b + '\u00B0C. What was the temperature at noon (in \u00B0C)?', a + b); },
+      r => { const a = r.int(20, 80), b = r.int(10, 60); return num('A diver is ' + a + ' m below sea level. ' + 'The diver goes down ' + b + ' m more. What is the diver\u2019s position, in meters? (Use a negative number for below sea level.)', -(a + b)); }
+    ],
+    two: [
+      r => { const a = r.int(2, 9), b = r.int(8, 20), c = r.int(3, 15); return num('The temperature was ' + a + '\u00B0C. It dropped by ' + b + '\u00B0C, then rose by ' + c + '\u00B0C. What is the final temperature (in \u00B0C)?', a - b + c); },
+      r => { const s = nm(r), a = r.int(50, 300), b = r.int(100, 500), c = r.int(20, 200); return num(s.n + ' owes \u20B1' + a + ' to a friend. ' + s.p + ' earns \u20B1' + b + ' and spends \u20B1' + c + ' on lunch. After paying the debt, how much money does ' + s.n + ' have? (Use a negative number if still in debt.)', b - c - a); }
+    ]
+  },
+  T5: {
+    one: [
+      r => { const N = r.pick([200, 300, 400, 500, 800]), pct = r.pick([10, 20, 25, 40, 50]); return num(pct + '% of ' + N + ' is how much?', (N * pct) / 100); },
+      r => { const v = r.int(30, 80), t = r.int(2, 6); return num('A jeepney travels at ' + v + ' km/h for ' + t + ' hours. How many kilometers does it travel?', v * t); }
+    ],
+    two: [
+      r => { const p = r.pick([200, 300, 400, 500, 800, 1000]), d = r.pick([10, 20, 25, 30, 40, 50]); return num('A shirt costs \u20B1' + p + '. It is on sale at ' + d + '% off. What is the sale price in pesos?', p - (p * d) / 100); },
+      r => { const v = r.int(20, 50), t = r.int(2, 4), v2 = r.int(30, 60), t2 = r.int(2, 4); return num('A banca travels ' + v + ' km/h for ' + t + ' hours, then ' + v2 + ' km/h for ' + t2 + ' hours. How many kilometers does it travel in all?', v * t + v2 * t2); }
+    ]
+  }
+};
+
+/* ================= BLUEPRINT (edit here to change test content) ================= */
+const BLUEPRINT = {
+  1: [['count', 2, {}], ['seq', 2, {}], ['add', 3, { a: [1, 9], b: [1, 9], max: 10 }], ['add', 2, { a: [5, 12], b: [3, 9], max: 20 }], ['cmp', 2, {}], ['numword', 1, {}]],
+  2: [['add', 3, { a: [10, 60], b: [1, 9], regroup: true, max: 99 }], ['add', 2, { a: [10, 60], b: [10, 39], max: 99 }], ['sub', 3, { a: [20, 99], b: [1, 9], regroup: true }], ['sub', 2, { a: [30, 99], b: [10, 49] }], ['wp', 2, {}]],
+  3: [['add', 2, { a: [100, 700], b: [100, 299], regroup: true, max: 999 }], ['sub', 2, { a: [300, 999], b: [100, 299], regroup: true }], ['mul', 2, { a: [2, 9], b: [2, 9] }], ['mul', 1, { a: [11, 29], b: [2, 5] }], ['div', 2, { d: [2, 9], q: [2, 9] }], ['div', 1, { d: [2, 9], q: [11, 25] }], ['wp', 2, {}]],
+  4: [['add', 2, { a: [1000, 9000], b: [1000, 5000], regroup: true, max: 14999 }], ['sub', 2, { a: [2000, 9999], b: [1000, 5999], regroup: true }], ['mul', 1, { a: [12, 99], b: [2, 9] }], ['mul', 1, { a: [101, 999], b: [2, 9] }], ['mul', 1, { a: [11, 40], b: [11, 30] }], ['div', 2, { d: [2, 9], q: [21, 150] }], ['div', 1, { d: [11, 25], q: [11, 40] }], ['wp', 2, {}]],
+  5: [['dec:add', 2, { dp: 2 }], ['dec:sub', 2, { dp: 2 }], ['dec:mul', 2, { w: [2, 12] }], ['mul', 1, { a: [21, 99], b: [21, 60] }], ['dec:div', 2, { w: [2, 9] }], ['div', 1, { d: [12, 35], q: [12, 90] }], ['wp', 2, {}]],
+  6: [['frac:add', 2, {}], ['frac:sub', 2, {}], ['frac:mul', 3, {}], ['frac:div', 3, {}], ['wp', 2, {}]],
+  7: [['int:add', 2, {}], ['int:sub', 2, {}], ['int:mul', 3, {}], ['int:div', 3, {}], ['wp', 2, {}]],
+  8: [['sdec:add', 2, {}], ['sfrac:sub', 2, {}], ['sfrac:mul', 1, {}], ['sdec:mul', 2, {}], ['sfrac:div', 1, {}], ['sdec:div', 2, {}], ['wp', 2, {}]],
+  9: [['expr', 10, {}], ['wp', 2, {}]],
+  10: [['expr', 10, {}], ['wp', 2, {}]]
+};
+const LEVEL_NOTE = {
+  1: 'Counting, number sense, addition facts', 2: 'Addition and subtraction, 2-digit', 3: 'Four operations, 3-digit and facts', 4: 'Four operations, multi-digit',
+  5: 'Decimals and multi-digit', 6: 'Fractions, ratio, percent', 7: 'Integers', 8: 'Rational numbers (signed decimals and fractions)', 9: 'Order of operations', 10: 'Exponents and roots in expressions'
+};
+
+function genNumeracy(learnerId, form, level) {
+  const r = mkR(hashStr(learnerId + '|N|' + form + '|' + level));
+  const items = []; const seen = new Set();
+  BLUEPRINT[level].forEach(([type, n, p]) => {
+    for (let i = 0; i < n; i++) {
+      let it, tries = 0;
+      do { it = GEN[type](r, p || {}, i, level); tries++; } while (seen.has(it.q + (it.big || '')) && tries < 40);
+      seen.add(it.q + (it.big || '')); it.skill = type.split(':')[0]; items.push(it);
+    }
+  });
+  items.forEach((it, idx) => { it.no = idx + 1; });
+  return items;
+}
+
+/* ================= ANSWER CHECKING ================= */
+function parseVal(s) {
+  s = String(s == null ? '' : s).trim().replace(/[\u2212\u2013]/g, '-').replace(/,/g, '').replace(/\s+/g, ' ');
+  if (!s) return NaN;
+  let m;
+  if ((m = s.match(/^(-?\d+)\s+(\d+)\/(\d+)$/))) { const w = Number(m[1]); const f = Number(m[2]) / Number(m[3]); return w < 0 || m[1].startsWith('-') ? w - f : w + f; }
+  if ((m = s.match(/^(-?\d+)\/(-?\d+)$/))) { return Number(m[2]) === 0 ? NaN : Number(m[1]) / Number(m[2]); }
+  if (/^-?\d*\.?\d+$/.test(s)) return Number(s);
+  return NaN;
+}
+function isCorrect(item, ans) {
+  if (ans == null || String(ans).trim() === '') return false;
+  if (item.t === 'mc') return String(ans).trim() === item.a;
+  const v = parseVal(ans); if (isNaN(v)) return false;
+  return Math.abs(v - item.v) < 1e-9;
+}
+if (typeof module !== 'undefined') module.exports = { genNumeracy, isCorrect, parseVal, BLUEPRINT, mkR, hashStr };
+
+/* ================= READING LADDER ================= */
+const READ_LEVELS = [
+  { lv: 1, name: 'Words', need: 8, n: 10 },
+  { lv: 2, name: 'Word sets', need: 4, n: 5 },
+  { lv: 3, name: 'Phrases', need: 4, n: 5 },
+  { lv: 4, name: 'Sentences', need: 4, n: 5 },
+  { lv: 5, name: 'Paragraph', need: 0, n: 1 }
+];
+const PARA_PASS = 0.9; // accuracy needed to pass the paragraph level
+const READING = {
+  en: {
+    label: 'English', mic: 'en-PH',
+    A: {
+      1: ['cat', 'sit', 'hop', 'bug', 'red', 'pen', 'map', 'cup', 'dog', 'fin'],
+      2: ['cat bat mat', 'sit hit pit', 'hop top mop', 'bug rug mug', 'red bed fed'],
+      3: ['a big cat', 'the red hat', 'sit on a mat', 'a hot pan', 'run to the sun'],
+      4: ['The cat sat on the mat.', 'Ben has a red hat.', 'The dog can run fast.', 'Mom put the pan on the stove.', 'We play in the yard after school.'],
+      5: ['Lina and her brother Ben go to the market every Saturday. They buy fish, rice, and fresh vegetables for the family. Ben carries the heavy bag while Lina holds the money. After shopping, they walk home and help Mother cook lunch.']
+    },
+    B: {
+      1: ['bat', 'pin', 'mop', 'rug', 'bed', 'hen', 'cap', 'sun', 'log', 'jam'],
+      2: ['can fan pan', 'big dig pig', 'hot pot dot', 'sun bun run', 'net pet wet'],
+      3: ['a fat hen', 'the wet dog', 'hop on a log', 'a red cup', 'jump in the mud'],
+      4: ['The hen is in the pen.', 'Sam has a big bag.', 'The pig sat in the mud.', 'Dad made a hot meal.', 'We help at home every day.'],
+      5: ['Tony lives near the sea. Every morning he helps his father push the small boat into the water. They catch many fish before the sun gets hot. Then Tony carries the basket of fish to the market and sells them to the buyers.']
+    }
+  },
+  fil: {
+    label: 'Filipino', mic: 'fil-PH',
+    A: {
+      1: ['bata', 'mata', 'kama', 'bola', 'sako', 'tela', 'mani', 'pako', 'lata', 'bibe'],
+      2: ['mama papa lola', 'bata bola mata', 'aso pusa daga', 'kama mesa upuan', 'araw ulan ulap'],
+      3: ['ang malaking aso', 'ang pulang bola', 'may bata sa bahay', 'si nanay at si tatay', 'ang masarap na saging'],
+      4: ['Si Ana ay may bagong lapis.', 'Masarap ang luto ni Nanay.', 'Naglalaro ang mga bata sa bakuran.', 'Maagang gumising si Tatay para mangisda.', 'Tumulong kami sa paglilinis ng bahay.'],
+      5: ['Tuwing Sabado, sumasama si Lina sa kanyang lola sa palengke. Bumibili sila ng isda, gulay, at prutas. Pagkauwi, tinutulungan ni Lina si Lola sa pagluluto ng tanghalian. Masaya silang kumakain nang sabay-sabay.']
+    },
+    B: {
+      1: ['baso', 'lupa', 'mesa', 'sapa', 'tubo', 'gamot', 'pala', 'wawa', 'kuya', 'dila'],
+      2: ['tatay nanay ate', 'gata mani saging', 'bahay pinto bintana', 'lapis papel pambura', 'isda hipon alimango'],
+      3: ['ang maliit na pusa', 'ang bagong lapis', 'may isda sa ilog', 'si ate at si kuya', 'ang mabangong bulaklak'],
+      4: ['Ang aso ay tumatahol sa gabi.', 'May malaking puno sa tabi ng paaralan.', 'Nagbasa ng aklat si Lito.', 'Bumili si Nanay ng isda sa palengke.', 'Masaya kaming kumain nang sabay-sabay.'],
+      5: ['Malapit sa dagat ang bahay nina Tony. Tuwing umaga, tinutulungan niya ang kanyang tatay na itulak ang bangka. Marami silang nahuhuling isda bago uminit ang araw. Dinadala ni Tony ang mga isda sa palengke para ibenta.']
+    }
+  }
+};
+const READ_FORM = { A: 'A', B: 'B' };
+const wordCount = s => s.trim().split(/\s+/).filter(Boolean).length;
+const defaultStartLevel = grade => (grade <= 1 ? 1 : grade === 2 ? 2 : grade === 3 ? 3 : 4);
+
+/* Level result -> {pass:boolean}. marks = array of 1/0 for levels 1-4; for level 5 pass miscues & words */
+function levelPassed(lv, marks, words, miscues) {
+  if (lv === 5) { if (!words) return false; return (words - miscues) / words >= PARA_PASS; }
+  const need = READ_LEVELS[lv - 1].need; const ok = marks.reduce((a, b) => a + (b ? 1 : 0), 0); return ok >= need;
+}
+/* Decide next level to test, given what has been passed/failed so far. returns null when finished */
+function nextReadingLevel(done) {
+  // done = { [lv]: true/false }
+  const lvls = Object.keys(done).map(Number).sort((a, b) => a - b);
+  const last = done.__last;
+  if (last == null) return null;
+  const passedHi = Math.max(0, ...lvls.filter(l => done[l] === true));
+  const failedLo = Math.min(99, ...lvls.filter(l => done[l] === false));
+  if (done[last] === true) { const nx = last + 1; if (nx > 5 || done[nx] !== undefined) return null; return nx; }
+  const nx = last - 1; if (nx < 1 || done[nx] !== undefined) return null; return nx;
+}
+function finalReadingLevel(done) { const p = Object.keys(done).filter(k => k !== '__last' && done[k] === true).map(Number); return p.length ? Math.max.apply(null, p) : 0; }
+
+/* Loose matching of what the microphone heard against the target text */
+function normTxt(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim(); }
+function micSuggest(target, heard) {
+  const t = normTxt(target).split(' ').filter(Boolean); const hs = normTxt(heard).split(' ').filter(Boolean);
+  if (!t.length || !hs.length) return null;
+  let hit = 0; const pool = hs.slice();
+  t.forEach(w => { const i = pool.indexOf(w); if (i >= 0) { hit++; pool.splice(i, 1); } });
+  return hit / t.length >= (t.length === 1 ? 1 : 0.8) ? 1 : 0;
+}
+if (typeof module !== 'undefined') module.exports = { READING, READ_LEVELS, levelPassed, nextReadingLevel, finalReadingLevel, micSuggest, wordCount };
+
+/* ================= CONFIG ================= */
+const CONFIG = {
+  VERSION: '1.0',
+  // Paste each district's Apps Script web app URL (ends with /exec) in "url".
+  DISTRICTS: [
+    { code: 'ALC', name: 'Alcantara', url: 'https://script.google.com/macros/s/AKfycbzzJn38tC46ftiXdXrjgndOM7s7CfcAhcEUpKdnW1SyhlOW3GBUXtBG9D9QllZTOUHN8g/exec' },
+    { code: 'BAN', name: 'Banton', url: 'https://script.google.com/macros/s/AKfycbwOvjAZYghkFTT_oD6-H6QPWmRZlBnMCg2MNq9Dp2T7prZguo2QUVFecNASZ4kb7mAf/exec' },
+    { code: 'CAM', name: 'Cajidiocan-Magdiwang', url: 'https://script.google.com/macros/s/AKfycbxaGG7wbLGY1T3xXRr_VByBjH540zPgm7jegCaUxa5snMg4U04H9E5KJeUzWwcOfkDzuA/exec' },
+    { code: 'CON', name: 'Concepcion', url: 'https://script.google.com/macros/s/AKfycbzddSqJTCP9c2RW7_a_3ghHKuKWYi-xRQV-7e4nRg9MEi0z78hwOqv3RzVavI_tcZ0WJQ/exec' },
+    { code: 'COR', name: 'Corcuera', url: 'https://script.google.com/macros/s/AKfycbywBvLyXo5lWLk3aZyWkmbecE9ewT5UF5uX-AfGDT1oabS3hfJygXcV7A4DiMflw6zZKw/exec' },
+    { code: 'LOO', name: 'Looc', url: 'https://script.google.com/macros/s/AKfycbzZiN3TEWvY88dmHxVuoydj5Aii7KbCrA69d4qTxFcbngv5WdBW0ZVbw_YdtS9FiPZW/exec' },
+    { code: 'ODN', name: 'Odiongan North', url: 'https://script.google.com/macros/s/AKfycbxjUbOMrTxY4cYha1hvyG_q-SVbLlutimy9N-qpDmrCYqUcexMHEBGnKvniiWk_qQDVMg/exec' },
+    { code: 'ODS', name: 'Odiongan South', url: 'https://script.google.com/macros/s/AKfycbz1r3r7BHqwZK6futSL8pMuVo-97yElBUZYMn_Iu9D7IfY-aNzxiTEebJ-LwGH2wFE9/exec' },
+    { code: 'ROM', name: 'Romblon', url: 'https://script.google.com/macros/s/AKfycbxNIU_-UUvQ2IxFwkqNOWtKP4b4qn5ELzj57_5EwhYT_1WFykbNPORMZ1KpHSTPB0u1zQ/exec' },
+    { code: 'SSC', name: 'San Agustin-Santa Maria-Calatrava', url: 'https://script.google.com/macros/s/AKfycbzBtg6jSq8liSFTisvBIeB9D3KYjFdaLK7eTuEuSltXe1AnuOvgo13EZfxlHE1tz-B1Pg/exec' },
+    { code: 'SAN', name: 'San Andres', url: 'https://script.google.com/macros/s/AKfycbwVK0OpW119Yeea8y2X3JI-lLFGFIj_V6ahZ73UL7EZaTFUS7MOhmM8LyIRE3dTGX753g/exec' },
+    { code: 'SFD', name: 'San Fernando', url: 'https://script.google.com/macros/s/AKfycbyvTEowCIaIadFN1GP6vPdQtsfmSUCEpfrI3SUJbwvXOqWcowB_0yLlis_phGKPk4SQ/exec' },
+    { code: 'SJF', name: 'San Jose-Santa Fe', url: 'https://script.google.com/macros/s/AKfycbwyQOt661M5GidmECS_xpJ3XYHGUOfb7enyUJ5Y12NnovViKzn3vH9E1EP0fJ1RtGSo/exec' },
+    { code: 'DEMO', name: 'Practice mode (works without internet)', url: '' }
+  ],
+  POST_FROM: '2026-12-01' // on or after this date the app opens on Posttest by default
+};
+
+/* ================= SMALL HELPERS ================= */
+const $ = (s, r) => (r || document).querySelector(s);
+function h(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  Object.entries(attrs || {}).forEach(([k, v]) => {
+    if (v == null || v === false) return;
+    if (k === 'class') e.className = v;
+    else if (k === 'html') e.innerHTML = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2).toLowerCase(), v);
+    else if (v === true) e.setAttribute(k, '');
+    else e.setAttribute(k, v);
+  });
+  kids.flat(Infinity).forEach(c => { if (c == null || c === false) return; e.append(c.nodeType ? c : document.createTextNode(String(c))); });
+  return e;
+}
+const isDesktop = () => !!(window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine) and (min-width: 900px)').matches);
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const pad3 = n => String(n).padStart(3, '0');
+function todayISO() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+const autoPhase = () => (todayISO() >= CONFIG.POST_FROM ? 'post' : 'pre');
+const distByCode = c => CONFIG.DISTRICTS.find(d => d.code === c);
+function errText(res, noSignal) {
+  if (res.error === 'offline') return navigator.onLine === false ? noSignal : 'Could not reach the district sheet, although your phone seems online. (' + (res.detail || 'no detail') + ') Please tell the Division office.';
+  if (res.error === 'badresponse') return 'The district sheet did not answer with data. Its web app must be set to “Anyone”. Please tell the Division office. (' + (res.detail || '') + ')';
+  return res.error;
+}
+const phaseLabel = p => (p === 'pre' ? 'Pretest' : 'Posttest');
+const domLabel = d => (d === 'numeracy' ? 'Numeracy' : d === 'reading_en' ? 'Reading (English)' : d === 'reading_fil' ? 'Reading (Filipino)' : d);
+const initials = n => n.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
+const round1 = x => Math.round(x * 10) / 10;
+function toast(msg, ms) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('on'), ms || 2600); }
+/* renders {1/2} tokens as stacked fractions */
+function richText(s) {
+  const out = []; const re = /\{(-?\d+)\/(\d+)\}/g; let last = 0, m;
+  while ((m = re.exec(s))) { if (m.index > last) out.push(s.slice(last, m.index)); out.push(h('span', { class: 'fr' }, h('span', {}, m[1]), h('span', {}, m[2]))); last = re.lastIndex; }
+  if (last < s.length) out.push(s.slice(last)); return out;
+}
+
+/* ================= STATE + STORAGE ================= */
+const LS = 'aral-gain-v1';
+let P = null; try { P = JSON.parse(localStorage.getItem(LS)); } catch (e) { P = null; }
+P = P || { session: null, data: {}, last: {} };
+if (P.session && P.session.remember === false && !sessionStorage.getItem('aral-alive')) { P.session = null; }
+sessionStorage.setItem('aral-alive', '1');
+const S = { tab: 'learners', phase: autoPhase(), q: '', openRow: null, sdom: 'math', online: navigator.onLine };
+function save() { try { localStorage.setItem(LS, JSON.stringify(P)); } catch (e) { toast('Phone storage is full. Sync first, then free some space.'); } }
+function D() { const id = P.session.tutor_id; return P.data[id] || (P.data[id] = { learners: [], results: {}, tracker: [], queue: [], pulledAt: 0 }); }
+const activeLearners = () => D().learners.filter(l => l.status !== 'removed').sort((a, b) => a.name.localeCompare(b.name));
+const learnerById = id => D().learners.find(l => l.id === id);
+const rkey = (lid, dom, ph) => lid + '|' + dom + '|' + ph;
+function schoolsOfDistrict() { const d = distByCode(P.session.district); return (d && SCHOOLS[d.name]) || []; }
+
+function applyOpLocal(op) {
+  const d = D(); const x = op.data;
+  if (op.type === 'learner') { const i = d.learners.findIndex(l => l.id === x.id); if (i >= 0) Object.assign(d.learners[i], x); else d.learners.push(Object.assign({}, x)); }
+  else if (op.type === 'result') { d.results[x.key] = x; }
+  else if (op.type === 'tracker') { if (!d.tracker.some(t => t.entry_id === x.entry_id)) d.tracker.push(x); }
+}
+function addOp(type, data) { const op = { id: uid(), type, data }; D().queue.push(op); applyOpLocal(op); save(); sync(); renderPill(); return op; }
+
+/* ================= API + SYNC ================= */
+async function api(action, payload) {
+  const dist = distByCode(payload.district || (P.session && P.session.district));
+  if (!dist) return { ok: false, error: 'Choose your district first.' };
+  if (dist.code === 'DEMO') return mockApi(action, payload);
+  if (!dist.url) return { ok: false, error: 'This district is not connected yet. Please ask the Division office.' };
+  const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 30000);
+  try {
+    const res = await fetch(dist.url, { method: 'POST', body: JSON.stringify(Object.assign({ action }, payload)), signal: ctl.signal });
+    const text = await res.text();
+    try { return JSON.parse(text); } catch (e) { return { ok: false, error: 'badresponse', detail: text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 140) }; }
+  } catch (e) { return { ok: false, error: 'offline', detail: (e && e.name === 'AbortError') ? 'It took too long to answer.' : String((e && e.message) || e) }; } finally { clearTimeout(to); }
+}
+let syncing = false;
+async function sync(manual) {
+  if (syncing || !P.session) return false; const d = D();
+  if (!d.queue.length && !manual) return true;
+  syncing = true; renderPill();
+  try {
+    while (D().queue.length) {
+      const batch = D().queue.slice(0, 40);
+      const res = await api('sync', { tutor_id: P.session.tutor_id, token: P.session.token, ops: batch });
+      if (!res.ok) { if (res.error === 'auth') { toast('Please sign in again.'); logout(true); return false; } throw new Error(res.error || 'failed'); }
+      const gone = new Set([].concat(res.applied || [], res.rejected || []));
+      D().queue = D().queue.filter(o => !gone.has(o.id)); save();
+    }
+    if (manual) await pull();
+    return true;
+  } catch (e) { return false; } finally { syncing = false; renderPill(); }
+}
+async function pull() {
+  const res = await api('pull', { tutor_id: P.session.tutor_id, token: P.session.token });
+  if (!res.ok) { if (res.error === 'auth') { logout(true); } return false; }
+  const d = D(); d.learners = res.learners || []; d.results = {}; (res.results || []).forEach(r => { d.results[r.key] = r; }); d.tracker = res.tracker || [];
+  d.queue.forEach(applyOpLocal); d.pulledAt = Date.now(); save(); return true;
+}
+function renderPill() {
+  const el = $('#pill'); if (!el || !P.session) return; const n = D().queue.length;
+  el.className = 'pill ' + (syncing ? 'busy' : n ? 'wait' : 'ok');
+  el.textContent = syncing ? 'Syncing…' : n ? n + ' waiting to send' : 'All saved';
+}
+window.addEventListener('online', () => { S.online = true; sync(); });
+window.addEventListener('offline', () => { S.online = false; renderPill(); });
+setInterval(() => { if (P.session) sync(); }, 60000);
+
+/* ================= PRACTICE-MODE BACKEND (DEMO only) ================= */
+function mockApi(action, p) {
+  const M = JSON.parse(localStorage.getItem('aral-gain-mock') || '{"tutors":{}}');
+  const out = (() => {
+    const t = M.tutors[p.tutor_id];
+    const nrm = x => String(x || '').toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/).filter(Boolean).sort().join(' ');
+    if (action === 'register') {
+      if (Object.values(M.tutors).some(x => nrm(x.name) === nrm(p.name) && nrm(x.school) === nrm(p.school))) return { ok: false, error: 'A tutor with this name and school is already registered. Tap “Forgot my code or PIN” to get back in.' };
+      if (!/^\d{4}$/.test(p.pin || '')) return { ok: false, error: 'PIN must be 4 digits.' };
+      let n = 0; Object.keys(M.tutors).forEach(k => { n = Math.max(n, Number(k.slice(-3)) || 0); }); const id = 'DEMO-' + String(n + 1).padStart(3, '0');
+      M.tutors[id] = { name: p.name, school: p.school, pin: p.pin, token: uid(), reset: '', roster: {}, prepost: {}, tracker: {} };
+      return { ok: true, status: 'ok', token: M.tutors[id].token, tutor_id: id, name: p.name, school: p.school };
+    }
+    if (action === 'login') {
+      const x = M.tutors[p.tutor_id]; if (!x) return { ok: false, error: 'Tutor code not found. Check the code, or tap New tutor? Register here.' };
+      if (!x.pin) return { ok: true, status: 'need_pin', name: x.name };
+      if (!p.pin) return { ok: false, error: 'Enter your PIN.' };
+      if (x.pin !== p.pin) return { ok: false, error: 'Wrong PIN.' };
+      x.token = uid(); return { ok: true, status: 'ok', token: x.token, name: x.name, school: x.school };
+    }
+    if (action === 'recover') {
+      const hit = Object.keys(M.tutors).filter(k => nrm(M.tutors[k].name) === nrm(p.name) && nrm(M.tutors[k].school) === nrm(p.school) && (!p.tutor_id || p.tutor_id === k));
+      if (hit.length !== 1) return { ok: false, error: 'The name or school does not match what you registered.' };
+      const x = M.tutors[hit[0]]; x.reset = uid(); return { ok: true, reset_token: x.reset, tutor_id: hit[0] };
+    }
+    if (action === 'setpin') {
+      const viaReset = t && p.reset_token && p.reset_token === t.reset;
+      if (!t || (t.pin && !viaReset)) return { ok: false, error: 'A PIN is already set. Sign in with it, or tap Forgot my code or PIN.' };
+      if (!/^\d{4}$/.test(p.pin)) return { ok: false, error: 'PIN must be 4 digits.' };
+      t.pin = p.pin; t.reset = ''; t.token = uid(); return { ok: true, status: 'ok', token: t.token, name: t.name, school: t.school };
+    }
+    if (!t || t.token !== p.token) return { ok: false, error: 'auth' };
+    if (action === 'sync') {
+      const applied = [];
+      (p.ops || []).forEach(op => { const x = op.data;
+        if (op.type === 'learner') t.roster[x.id] = Object.assign(t.roster[x.id] || {}, x);
+        else if (op.type === 'result') t.prepost[x.key] = x;
+        else if (op.type === 'tracker') t.tracker[x.entry_id] = x;
+        applied.push(op.id); });
+      return { ok: true, applied, rejected: [] };
+    }
+    if (action === 'pull') return { ok: true, learners: Object.values(t.roster), results: Object.values(t.prepost), tracker: Object.values(t.tracker) };
+    return { ok: false, error: 'Unknown action.' };
+  })();
+  localStorage.setItem('aral-gain-mock', JSON.stringify(M));
+  return Promise.resolve(out);
+}
+
+/* ================= SHELL ================= */
+const ICON = {
+  people: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17.5" cy="9" r="2.4"/><path d="M17 14.2c2.4.2 4.2 2.1 4.2 4.8"/></svg>',
+  clip: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M8.5 12.5l2.2 2.2 4.3-4.6"/></svg>',
+  chart: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
+  user: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20.5c0-4 3.4-6.5 7.5-6.5s7.5 2.5 7.5 6.5"/></svg>'
+};
+const MARKS = '<svg viewBox="0 0 96 28" width="96" height="28" aria-hidden="true"><path d="M14 2l3.5 7.6 8.3.9-6.2 5.6 1.8 8.2L14 20l-7.4 4.3 1.8-8.2L2.2 10.5l8.3-.9z" fill="#F0B323"/><path d="M48 3l12 21H36z" fill="none" stroke="#12284A" stroke-width="2.4" stroke-linejoin="round"/><circle cx="82" cy="14" r="11" fill="none" stroke="#D2473A" stroke-width="2.4"/></svg>';
+
+function render() {
+  const app = $('#app'); app.innerHTML = '';
+  if (!P.session) { app.append(loginScreen()); return; }
+  const dist = distByCode(P.session.district);
+  const main = S.tab === 'learners' ? scrLearners() : S.tab === 'session' ? scrSession() : S.tab === 'report' ? scrReport() : scrAccount();
+  app.append(
+    h('header', { class: 'top' }, h('div', { class: 'who' }, h('strong', {}, P.session.name || P.session.tutor_id), h('span', {}, (dist ? dist.name : '') + ' · ' + P.session.tutor_id)), h('div', { class: 'hdr-r' }, h('div', { id: 'pill', class: 'pill ok' }, ''), h('button', { class: 'help', onclick: () => sheetHelp(), 'aria-label': 'Help' }, '?'))),
+    h('main', { class: 'main' }, main),
+    h('nav', { class: 'bar' }, [['learners', 'Learners', ICON.people], ['session', 'Today', ICON.clip], ['report', 'Report', ICON.chart], ['account', 'Account', ICON.user]].map(([k, t, ic]) =>
+      h('button', { class: 'tab' + (S.tab === k ? ' on' : ''), onclick: () => { S.tab = k; S.openRow = null; render(); window.scrollTo(0, 0); }, 'aria-current': S.tab === k ? 'page' : null }, h('span', { html: ic }), h('span', {}, t))))
+  );
+  renderPill();
+}
+
+/* ================= LOGIN ================= */
+function schoolsFor(code) { const d = distByCode(code); return (d && SCHOOLS[d.name]) || []; }
+function districtSelect(val) { const sel = h('select', { 'aria-label': 'District' }, h('option', { value: '' }, 'Choose your district'), CONFIG.DISTRICTS.map(d => h('option', { value: d.code }, d.name))); if (val) sel.value = val; return sel; }
+const OTHER_SCHOOL = '__other__';
+/* School as a dropdown (like District), with a "not on this list" choice that opens a text box. */
+function schoolPicker(distFn, initial, id) {
+  const sel = h('select', { 'aria-label': 'School', id: id ? id + 'Sel' : null }); const other = h('input', { type: 'text', id: id || null, placeholder: 'Type the full school name', hidden: true, autocomplete: 'off' });
+  const fill = keep => {
+    sel.innerHTML = ''; const dc = distFn();
+    if (!dc) { sel.append(h('option', { value: '' }, 'Choose your district first')); sel.disabled = true; other.hidden = true; return; }
+    const list = schoolsFor(dc); sel.disabled = false;
+    sel.append(h('option', { value: '' }, 'Choose your school'), ...list.map(x => h('option', { value: x }, x)), h('option', { value: OTHER_SCHOOL }, 'My school is not on this list'));
+    if (keep) { if (list.indexOf(keep) >= 0) sel.value = keep; else { sel.value = OTHER_SCHOOL; other.value = keep; } }
+    other.hidden = sel.value !== OTHER_SCHOOL;
+  };
+  sel.addEventListener('change', () => { other.hidden = sel.value !== OTHER_SCHOOL; if (!other.hidden) other.focus(); });
+  fill(initial || '');
+  return { wrap: h('div', { class: 'stack tight' }, sel, other), sel, other, refresh: () => fill(''), value: () => (sel.value === OTHER_SCHOOL ? other.value.trim() : sel.value) };
+}
+function loginScreen() {
+  const dsel = districtSelect(P.last && P.last.district); dsel.id = 'lgD';
+  const code = h('input', { id: 'lgC', type: 'text', autocapitalize: 'characters', autocomplete: 'username', placeholder: 'Your tutor code, e.g. ALC-014', value: (P.last && P.last.tutor_id) || '' });
+  const pin = h('input', { id: 'lgP', type: 'password', inputmode: 'numeric', maxlength: '4', autocomplete: 'current-password', placeholder: '4-digit PIN' });
+  const show = h('input', { type: 'checkbox', id: 'lgS', onchange: e => { pin.type = e.target.checked ? 'text' : 'password'; } });
+  const rem = h('input', { type: 'checkbox', id: 'lgR', checked: true });
+  const msg = h('p', { class: 'err', id: 'lgM', role: 'alert' });
+  const clear = () => { msg.textContent = ''; }; dsel.addEventListener('change', clear); code.addEventListener('input', clear); pin.addEventListener('input', clear);
+  const vals = () => ({ district: dsel.value, code: code.value.trim().toUpperCase(), pin: pin.value, remember: rem.checked });
+  const signIn = h('button', { class: 'btn primary wide', id: 'btnSign', onclick: () => doLogin(vals(), msg, signIn) }, 'Sign in');
+  const reg = h('button', { class: 'btn wide', id: 'btnReg', onclick: () => registerScreen(dsel.value, rem.checked) }, 'New tutor? Register here');
+  const forgot = h('button', { class: 'btn ghost wide', id: 'btnForgot', onclick: () => recoverScreen(dsel.value, rem.checked) }, 'Forgot my code or PIN');
+  return h('div', { class: 'login' },
+    h('div', { class: 'brand' }, h('span', { html: MARKS }), h('h1', {}, 'ARAL Gain Tracker'), h('p', {}, 'Schools Division Office of Romblon')),
+    h('label', { class: 'fld' }, h('span', {}, 'District'), dsel), h('label', { class: 'fld' }, h('span', {}, 'Tutor code'), code), h('label', { class: 'fld' }, h('span', {}, 'PIN'), pin),
+    h('label', { class: 'chk' }, show, h('span', {}, 'Show PIN')), h('label', { class: 'chk' }, rem, h('span', {}, 'Keep me signed in on this phone')), msg, signIn,
+    h('div', { class: 'or' }, h('span', {}, 'First time here?')), reg, forgot,
+    h('button', { class: 'btn ghost wide', id: 'btnHelp', onclick: () => sheetHelp() }, 'How this app works'),
+    h('p', { class: 'note' }, 'Learner names stay in your district sheet. Division reports use learner codes only.'));
+}
+async function doLogin(v, msg, btn) {
+  msg.textContent = '';
+  if (!v.district) { msg.textContent = 'Choose your district.'; return; }
+  if (!v.code) { msg.textContent = 'Enter your tutor code. New tutor? Tap “New tutor? Register here”.'; return; }
+  if (v.district !== 'DEMO' && !v.code.startsWith(v.district + '-')) { msg.textContent = /^[A-Z]{3}-\d{3}$/.test(v.code) ? 'This code does not belong to ' + distByCode(v.district).name + '. Check your district.' : 'A tutor code looks like ' + v.district + '-001: three letters, a dash and numbers. The PIN goes in the PIN box. No code yet? Tap “New tutor? Register here”.'; return; }
+  if (!v.pin) { msg.textContent = 'Enter your PIN. Forgot it? Tap “Forgot my code or PIN”.'; return; }
+  const label = btn.textContent; btn.disabled = true; btn.textContent = 'Checking…';
+  const res = await api('login', { district: v.district, tutor_id: v.code, pin: v.pin });
+  btn.disabled = false; btn.textContent = label;
+  P.last = Object.assign(P.last || {}, { district: v.district, tutor_id: v.code });
+  if (!res.ok) { msg.textContent = errText(res, 'No signal. Connect to the internet to sign in the first time.'); return; }
+  if (res.status === 'need_pin') { createPinScreen(v.district, v.code, v.remember, res.name, null); return; }
+  await finishLogin(v.district, v.code, v.remember, res);
+}
+function pinFields() {
+  const a = h('input', { type: 'password', inputmode: 'numeric', maxlength: '4', placeholder: '4 digits', 'aria-label': 'New PIN' }); const b = h('input', { type: 'password', inputmode: 'numeric', maxlength: '4', placeholder: 'Type it again', 'aria-label': 'Confirm PIN' });
+  const show = h('input', { type: 'checkbox', onchange: e => { a.type = b.type = e.target.checked ? 'text' : 'password'; } }); const ack = h('input', { type: 'checkbox', id: 'pinAck' });
+  const warn = h('div', { class: 'warn big' }, h('strong', {}, 'Remember your PIN and your tutor code.'), h('p', {}, 'Write them down somewhere safe, not on the phone. You need them when you sign in on a new phone or after you sign out.'), h('p', {}, 'If you forget, tap “Forgot my code or PIN” on the sign-in page and confirm your full name and school, or ask your district coordinator.'));
+  const check = msg => { if (!/^\d{4}$/.test(a.value)) { msg.textContent = 'Your PIN must be exactly 4 digits.'; return false; } if (a.value !== b.value) { msg.textContent = 'The two PINs do not match.'; return false; } if (!ack.checked) { msg.textContent = 'Tick the box to confirm you will remember your PIN.'; return false; } return true; };
+  const els = [warn, h('label', { class: 'fld' }, h('span', {}, 'New PIN'), a), h('label', { class: 'fld' }, h('span', {}, 'Confirm PIN'), b), h('label', { class: 'chk' }, show, h('span', {}, 'Show PIN')), h('label', { class: 'chk' }, ack, h('span', {}, 'I will remember my PIN and my code'))];
+  return { els, a, check };
+}
+function createPinScreen(district, code, remember, name, resetToken) {
+  const app = $('#app'); app.innerHTML = ''; const pf = pinFields(); const msg = h('p', { class: 'err', role: 'alert' });
+  const btn = h('button', { class: 'btn primary wide', id: 'btnSavePin', onclick: async () => {
+    msg.textContent = ''; if (!pf.check(msg)) return;
+    btn.disabled = true; const res = await api('setpin', { district, tutor_id: code, pin: pf.a.value, reset_token: resetToken || '' }); btn.disabled = false;
+    if (!res.ok) { msg.textContent = errText(res, 'No signal. Try again when connected.'); return; }
+    await finishLogin(district, code, remember, res);
+  } }, 'Save PIN and sign in');
+  app.append(h('div', { class: 'login' }, h('div', { class: 'brand' }, h('span', { html: MARKS }), h('h1', {}, 'Create your PIN'), h('p', {}, (name || code) + ' · code ' + code)), pf.els, msg, btn, h('button', { class: 'btn ghost wide', onclick: render }, 'Back')));
+}
+function registerScreen(district, remember) {
+  const app = $('#app'); app.innerHTML = '';
+  const dsel = districtSelect(district); const nin = h('input', { type: 'text', id: 'rgName', autocomplete: 'name', placeholder: 'e.g. Ana Reyes' }); const sb = schoolPicker(() => dsel.value, '', 'rgSchool'); dsel.addEventListener('change', () => sb.refresh());
+  const key = h('input', { type: 'text', id: 'rgKey', autocapitalize: 'off', autocomplete: 'off', placeholder: 'Given by your district coordinator' });
+  const keyWrap = h('label', { class: 'fld', id: 'rgKeyWrap', hidden: true }, h('span', {}, 'Registration key'), key); // only shown if the district asks for one
+  const pf = pinFields(); const msg = h('p', { class: 'err', role: 'alert' });
+  const btn = h('button', { class: 'btn primary wide', id: 'btnRegister', onclick: async () => {
+    msg.textContent = ''; const d = dsel.value;
+    if (!d) { msg.textContent = 'Choose your district.'; return; } if (nin.value.trim().split(/\s+/).length < 2) { msg.textContent = 'Type your full name (first and last name).'; return; } if (!sb.value()) { msg.textContent = 'Type your school.'; return; }
+    if (!pf.check(msg)) return;
+    btn.disabled = true; const res = await api('register', { district: d, name: nin.value.trim(), school: sb.value(), key: key.value.trim(), pin: pf.a.value }); btn.disabled = false;
+    if (!res.ok) {
+      if (res.error === 'key_required') { keyWrap.hidden = false; msg.textContent = 'This district asks for a registration key. Type it in the new box (ask your coordinator).'; key.focus(); return; }
+      msg.textContent = errText(res, 'No signal. Connect to the internet to register.'); return;
+    }
+    P.last = Object.assign(P.last || {}, { district: d, tutor_id: res.tutor_id });
+    codeScreen(d, res, remember !== false);
+  } }, 'Register and sign in');
+  app.append(h('div', { class: 'login' }, h('div', { class: 'brand' }, h('span', { html: MARKS }), h('h1', {}, 'Register as a tutor'), h('p', {}, 'Use your full name and school exactly as in your appointment. You only do this once.')),
+    h('label', { class: 'fld' }, h('span', {}, 'District'), dsel), h('label', { class: 'fld' }, h('span', {}, 'Full name'), nin), h('label', { class: 'fld' }, h('span', {}, 'School'), sb.wrap),
+    keyWrap, pf.els, msg, btn, h('button', { class: 'btn ghost wide', onclick: render }, 'Back')));
+}
+function codeScreen(district, res, remember) {
+  const app = $('#app'); app.innerHTML = '';
+  app.append(h('div', { class: 'login' }, h('div', { class: 'brand' }, h('span', { html: MARKS }), h('h1', {}, 'You are registered'), h('p', {}, res.name)),
+    h('div', { class: 'codebox' }, h('small', {}, 'Your tutor code'), h('strong', { id: 'myCode' }, res.tutor_id)),
+    h('div', { class: 'warn big' }, h('strong', {}, 'Write down this code and your PIN now.'), h('p', {}, 'You need both to sign in on another phone. Without them, you will have to use “Forgot my code or PIN”.')),
+    h('button', { class: 'btn primary wide', id: 'btnCodeOk', onclick: () => finishLogin(district, res.tutor_id, remember, res) }, 'I wrote them down. Continue')));
+}
+function recoverScreen(district, remember) {
+  const app = $('#app'); app.innerHTML = '';
+  const dsel = districtSelect(district); const nin = h('input', { type: 'text', id: 'rcName', autocomplete: 'name', placeholder: 'e.g. Ana Reyes' }); const sb = schoolPicker(() => dsel.value, '', 'rcSchool'); dsel.addEventListener('change', () => sb.refresh());
+  const cin = h('input', { type: 'text', id: 'rcCode', autocapitalize: 'characters', placeholder: 'Only if you remember it' });
+  const msg = h('p', { class: 'err', role: 'alert' });
+  const btn = h('button', { class: 'btn primary wide', id: 'btnRecover', onclick: async () => {
+    msg.textContent = ''; const d = dsel.value;
+    if (!d || !nin.value.trim() || !sb.value()) { msg.textContent = 'Choose your district and type your full name and school.'; return; }
+    btn.disabled = true; const res = await api('recover', { district: d, tutor_id: cin.value.trim().toUpperCase(), name: nin.value.trim(), school: sb.value() }); btn.disabled = false;
+    if (!res.ok) { msg.textContent = errText(res, 'No signal. Try again when connected.'); return; }
+    P.last = Object.assign(P.last || {}, { district: d, tutor_id: res.tutor_id });
+    createPinScreen(d, res.tutor_id, remember !== false, nin.value.trim(), res.reset_token);
+  } }, 'Check and continue');
+  app.append(h('div', { class: 'login' }, h('div', { class: 'brand' }, h('span', { html: MARKS }), h('h1', {}, 'Forgot your code or PIN?'), h('p', {}, 'Type your full name and school exactly as you registered. We will show your tutor code and let you choose a new PIN.')),
+    h('label', { class: 'fld' }, h('span', {}, 'District'), dsel), h('label', { class: 'fld' }, h('span', {}, 'Full name'), nin), h('label', { class: 'fld' }, h('span', {}, 'School'), sb.wrap), h('label', { class: 'fld' }, h('span', {}, 'Tutor code (optional)'), cin), msg, btn,
+    h('p', { class: 'note' }, 'Too many wrong tries lock this for 15 minutes. Your coordinator can also help. After a new PIN, other phones must sign in again.'),
+    h('button', { class: 'btn ghost wide', onclick: render }, 'Back')));
+}
+async function finishLogin(district, code, remember, res) {
+  P.session = { district, tutor_id: code, name: res.name || code, school: res.school || '', token: res.token, remember };
+  save(); S.tab = 'learners'; S.phase = autoPhase();
+  $('#app').innerHTML = '<p class="loading">Loading your learners…</p>';
+  await pull(); render();
+}
+function logout(silent) {
+  if (!silent && D().queue.length && !confirm(D().queue.length + ' items are still waiting to send. If you sign out now they stay on this phone until you sign in again. Sign out?')) return;
+  P.session = null; save(); render();
+}
+
+/* ================= LEARNERS ================= */
+function statusOf(lid, phase) {
+  const has = dom => !!D().results[rkey(lid, dom, phase)];
+  return { num: has('numeracy'), read: has('reading_en') || has('reading_fil') };
+}
+function scrLearners() {
+  const all = activeLearners(); const box = h('div', { class: 'stack' });
+  const seg = h('div', { class: 'seg', role: 'tablist' }, ['pre', 'post'].map(p => h('button', { class: S.phase === p ? 'on' : '', role: 'tab', 'aria-selected': S.phase === p, onclick: () => { S.phase = p; render(); } }, phaseLabel(p))));
+  const done = { n: 0, r: 0 }; all.forEach(l => { const s = statusOf(l.id, S.phase); if (s.num) done.n++; if (s.read) done.r++; });
+  const list = h('div', { class: 'list' });
+  const fill = () => {
+    list.innerHTML = ''; const q = S.q.trim().toLowerCase();
+    const rows = all.filter(l => !q || l.name.toLowerCase().includes(q) || (l.school || '').toLowerCase().includes(q));
+    if (!all.length) { list.append(h('div', { class: 'empty' }, h('p', {}, 'No learners yet.'), h('p', { class: 'sub' }, 'Add the learners you tutor. You can paste a whole list at once.'), h('button', { class: 'btn primary', onclick: () => sheetBulk() }, 'Add learners'))); return; }
+    if (!rows.length) { list.append(h('p', { class: 'sub pad' }, 'No match for “' + S.q + '”.')); return; }
+    rows.forEach(l => { const s = statusOf(l.id, S.phase);
+      list.append(h('button', { class: 'row ' + (l.group === 'pullout' ? 'pull' : 'reg'), onclick: () => sheetLearner(l.id) },
+        h('span', { class: 'av' }, initials(l.name)), h('span', { class: 'rn' }, h('strong', {}, l.name), h('small', {}, 'Grade ' + l.grade + ' · ' + (l.school || 'No school') + (l.group === 'pullout' ? ' · Pull-out' : ''))),
+        h('span', { class: 'chips' }, h('i', { class: 'chip' + (s.num ? ' ok' : '') }, 'Num'), h('i', { class: 'chip' + (s.read ? ' ok' : '') }, 'Read')))); });
+  };
+  box.append(seg, h('div', { class: 'sumline' }, h('strong', {}, all.length + ' learners'), h('span', {}, phaseLabel(S.phase) + ': numeracy ' + done.n + '/' + all.length + ', reading ' + done.r + '/' + all.length)),
+    h('div', { class: 'tools' }, h('input', { type: 'search', placeholder: 'Search name or school', value: S.q, 'aria-label': 'Search learners', oninput: e => { S.q = e.target.value; fill(); } }), h('button', { class: 'btn primary', onclick: () => sheetBulk() }, 'Add')), list);
+  fill(); return box;
+}
+
+function openSheet(content) {
+  const s = $('#sheet'); s.innerHTML = '';
+  s.append(h('div', { class: 'sheet-back', onclick: closeSheet }), h('div', { class: 'sheet-box', role: 'dialog', 'aria-modal': 'true' }, h('button', { class: 'x', onclick: closeSheet, 'aria-label': 'Close' }, '×'), content));
+  s.hidden = false; document.body.classList.add('noscroll');
+}
+function closeSheet() { const s = $('#sheet'); s.hidden = true; s.innerHTML = ''; if ($('#test').hidden) document.body.classList.remove('noscroll'); }
+function openTest(el) { const t = $('#test'); t.innerHTML = ''; t.append(el); t.hidden = false; document.body.classList.add('noscroll'); window.scrollTo(0, 0); }
+let KEYH = null;
+function setKey(fn) { if (KEYH) document.removeEventListener('keydown', KEYH); KEYH = fn || null; if (fn) document.addEventListener('keydown', fn); }
+function closeTest() { setKey(null); const t = $('#test'); t.hidden = true; t.innerHTML = ''; if ($('#sheet').hidden) document.body.classList.remove('noscroll'); render(); }
+
+function resultsFor(lid) { const out = {}; Object.values(D().results).forEach(r => { if (r.learner_id === lid) (out[r.domain] = out[r.domain] || {})[r.phase] = r; }); return out; }
+function resLine(r) { if (!r) return '—'; return r.domain === 'numeracy' ? r.raw + '/' + r.total + ' (' + Math.round(r.pct) + '%)' : 'Level ' + r.reading_level + ' of 5'; }
+
+function sheetLearner(id) {
+  const l = learnerById(id); if (!l) return; const R = resultsFor(id);
+  const doms = Object.keys(R).sort();
+  openSheet(h('div', { class: 'stack' },
+    h('h2', {}, l.name), h('p', { class: 'sub' }, 'Grade ' + l.grade + ' · ' + (l.school || 'No school') + ' · ' + (l.group === 'pullout' ? 'Pull-out group' : 'Regular group') + ' · Code ' + l.id),
+    h('div', { class: 'two' }, h('button', { class: 'btn primary', onclick: () => { closeSheet(); sheetNumLaunch(id); } }, 'Numeracy ' + (S.phase === 'pre' ? 'pretest' : 'posttest')), h('button', { class: 'btn primary', onclick: () => { closeSheet(); sheetReadLaunch(id); } }, 'Reading ' + (S.phase === 'pre' ? 'pretest' : 'posttest'))),
+    h('div', { class: 'two' }, h('button', { class: 'btn', onclick: () => { closeSheet(); S.tab = 'session'; S.openRow = id; render(); } }, 'Log a session'), h('button', { class: 'btn', onclick: () => { closeSheet(); sheetEdit(id); } }, 'Edit learner')),
+    doms.length ? h('table', { class: 'mini' }, h('thead', {}, h('tr', {}, h('th', {}, ''), h('th', {}, 'Pretest'), h('th', {}, 'Posttest'))), h('tbody', {}, doms.map(d => h('tr', {}, h('th', {}, domLabel(d)), h('td', {}, resLine(R[d].pre)), h('td', {}, resLine(R[d].post)))))) : h('p', { class: 'sub' }, 'No test results yet.')));
+}
+
+function schoolInput(val) { return schoolPicker(() => P.session.district, val || ''); }
+function gradeSelect(val) { return h('select', {}, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(g => h('option', { value: g, selected: Number(val) === g }, 'Grade ' + g))); }
+function groupSelect(val) { return h('select', {}, h('option', { value: 'regular', selected: val !== 'pullout' }, 'Regular group'), h('option', { value: 'pullout', selected: val === 'pullout' }, 'Pull-out (2 to 3 learners)')); }
+function schoolIsNew(s) { return !!s && !schoolsOfDistrict().some(x => x.toLowerCase() === s.toLowerCase()); }
+function nextSeq() { const pre = P.session.tutor_id + '-'; let m = 0; D().learners.forEach(l => { if (l.id.startsWith(pre)) m = Math.max(m, Number(l.id.slice(pre.length)) || 0); }); return m; }
+
+function sheetBulk() {
+  const sc = schoolInput((P.last && P.last.school) || P.session.school || ''); const gr = gradeSelect((P.last && P.last.grade) || 1); const gp = groupSelect((P.last && P.last.group) || 'regular');
+  const ta = h('textarea', { rows: '8', placeholder: 'One learner per line.\nJuan Dela Cruz\nMaria Santos, 3\n(Add a comma and a grade only if it differs from the grade above.)' });
+  const msg = h('p', { class: 'err', role: 'alert' });
+  openSheet(h('div', { class: 'stack' }, h('h2', {}, 'Add learners'),
+    h('label', { class: 'fld' }, h('span', {}, 'School'), sc.wrap), h('div', { class: 'two' }, h('label', { class: 'fld' }, h('span', {}, 'Grade'), gr), h('label', { class: 'fld' }, h('span', {}, 'Group'), gp)),
+    h('label', { class: 'fld' }, h('span', {}, 'Names (paste a list or type one per line)'), ta), msg,
+    h('button', { class: 'btn primary wide', onclick: () => {
+      const school = sc.value(); if (!school) { msg.textContent = 'Enter the learners’ school.'; return; }
+      const lines = ta.value.split('\n').map(x => x.trim()).filter(Boolean); if (!lines.length) { msg.textContent = 'Add at least one name.'; return; }
+      let seq = nextSeq(); let n = 0;
+      lines.forEach(line => { let name = line, grade = Number(gr.value); const m = line.match(/^(.*?)[,;\t]\s*(\d{1,2})\s*$/); if (m && Number(m[2]) >= 1 && Number(m[2]) <= 10) { name = m[1].trim(); grade = Number(m[2]); }
+        if (!name) return; seq++; n++;
+        addOp('learner', { id: P.session.tutor_id + '-' + pad3(seq), name, school, grade, group: gp.value, status: 'active', school_new: schoolIsNew(school) ? 1 : 0, enrolled: todayISO() }); });
+      P.last = Object.assign(P.last || {}, { school, grade: gr.value, group: gp.value }); save(); closeSheet(); render(); toast(n + ' learner' + (n === 1 ? '' : 's') + ' added');
+    } }, 'Save learners')));
+}
+function sheetEdit(id) {
+  const l = learnerById(id); const name = h('input', { type: 'text', value: l.name }); const sc = schoolInput(l.school); const gr = gradeSelect(l.grade); const gp = groupSelect(l.group);
+  const msg = h('p', { class: 'err' });
+  openSheet(h('div', { class: 'stack' }, h('h2', {}, 'Edit learner'), h('label', { class: 'fld' }, h('span', {}, 'Full name'), name), h('label', { class: 'fld' }, h('span', {}, 'School'), sc.wrap),
+    h('div', { class: 'two' }, h('label', { class: 'fld' }, h('span', {}, 'Grade'), gr), h('label', { class: 'fld' }, h('span', {}, 'Group'), gp)), msg,
+    h('button', { class: 'btn primary wide', onclick: () => { if (!name.value.trim() || !sc.value()) { msg.textContent = 'Name and school are required.'; return; }
+      addOp('learner', { id, name: name.value.trim(), school: sc.value(), grade: Number(gr.value), group: gp.value, school_new: schoolIsNew(sc.value()) ? 1 : 0 }); closeSheet(); render(); toast('Saved'); } }, 'Save changes'),
+    h('button', { class: 'btn danger wide', onclick: () => { if (confirm('Remove ' + l.name + ' from your list? Their test results stay in the district record.')) { addOp('learner', { id, status: 'removed' }); closeSheet(); render(); } } }, 'Remove from my list')));
+}
+
+/* ================= NUMERACY TEST ================= */
+function sheetNumLaunch(id) {
+  const l = learnerById(id); const phase = S.phase; const form = phase === 'pre' ? 'A' : 'B';
+  const lv = h('select', {}, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(g => h('option', { value: g, selected: g === Number(l.grade) }, 'Level ' + g + ' · ' + LEVEL_NOTE[g])));
+  let mode = 'device'; const mb = h('div', { class: 'seg' }, [['device', 'Learner answers on this phone'], ['paper', 'Enter answers from paper']].map(([k, t]) => h('button', { class: k === mode ? 'on' : '', onclick: e => { mode = k; [...mb.children].forEach(c => c.classList.remove('on')); e.currentTarget.classList.add('on'); } }, t)));
+  const have = D().results[rkey(id, 'numeracy', phase)];
+  openSheet(h('div', { class: 'stack' }, h('h2', {}, 'Numeracy ' + phaseLabel(phase).toLowerCase()), h('p', { class: 'sub' }, l.name + ' · Grade ' + l.grade + ' · Form ' + form), have ? h('p', { class: 'warn' }, 'This learner already has a ' + phaseLabel(phase).toLowerCase() + ' score (' + resLine(have) + '). Starting again replaces it.') : null,
+    h('label', { class: 'fld' }, h('span', {}, 'Test level (choose a lower level for a learner who is behind)'), lv), mb,
+    h('div', { class: 'two' }, h('button', { class: 'btn', onclick: () => printNum(l, phase, Number(lv.value)) }, 'Print the test'), h('button', { class: 'btn primary', onclick: () => { closeSheet(); runNumeracy(l, phase, Number(lv.value), mode); } }, 'Start'))));
+}
+function qEl(it) { return h('div', { class: 'q' }, it.big ? h('div', { class: 'bigemo', 'aria-label': 'Picture to count' }, it.big) : null, h('div', { class: 'qt' }, richText(it.q))); }
+function keysFor(level) { const k = ['7', '8', '9', '4', '5', '6', '1', '2', '3']; const last = level >= 7 ? [MINUS, '0', '.'] : level === 5 ? ['', '0', '.'] : ['', '0', '']; const ex = level >= 6 ? ['/', ' ', '⌫'] : ['', '', '⌫']; return k.concat(last, ex); }
+function runNumeracy(l, phase, level, mode) {
+  const form = phase === 'pre' ? 'A' : 'B'; const items = genNumeracy(l.id, form, level);
+  const T = { l, phase, form, level, mode, items, ans: items.map(() => ''), i: 0, t0: Date.now() };
+  mode === 'paper' ? paperView(T) : deviceView(T);
+}
+function topTest(title, sub, onQuit) { return h('div', { class: 'ttop' }, h('div', {}, h('strong', {}, title), h('small', {}, sub)), h('button', { class: 'btn ghost', onclick: () => { if (confirm('Stop this test? Nothing will be saved.')) { onQuit ? onQuit() : closeTest(); } } }, 'Stop')); }
+function deviceView(T) {
+  const wrap = h('div', { class: 'tview' });
+  const bar = h('div', { class: 'prog' }, h('i', {}));
+  const body = h('div', { class: 'tbody' }); const foot = h('div', { class: 'tfoot' });
+  const draw = () => {
+    setKey(null); const it = T.items[T.i]; body.innerHTML = ''; foot.innerHTML = ''; bar.firstChild.style.width = ((T.i) / T.items.length * 100) + '%';
+    body.append(h('div', { class: 'cnt' }, 'Item ' + (T.i + 1) + ' of ' + T.items.length), qEl(it));
+    let disp;
+    if (it.t === 'mc') { body.append(h('div', { class: 'opts' }, it.opts.map(o => h('button', { class: 'opt' + (T.ans[T.i] === o ? ' on' : ''), onclick: () => { T.ans[T.i] = o; draw(); } }, o)))); }
+    else {
+      const desk = isDesktop();
+      disp = h('input', { class: 'answer', type: 'text', value: T.ans[T.i] || '', readonly: !desk, inputmode: desk ? 'text' : 'none', autocomplete: 'off', 'aria-label': 'Answer' });
+      if (desk) {
+        disp.addEventListener('input', e => { T.ans[T.i] = e.target.value.replace(/-/g, MINUS).slice(0, 14); });
+        disp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); next(); } });
+        body.append(disp, h('p', { class: 'hint center' }, 'Type the answer and press Enter. Use / for fractions, e.g. 3/4.')); setTimeout(() => disp.focus(), 0);
+      } else {
+        const put = v => { T.ans[T.i] = v; disp.value = v; };
+        body.append(disp, h('div', { class: 'keys' }, keysFor(T.level).map(k => k === '' ? h('span', {}) : h('button', { class: 'key' + (k === '⌫' ? ' del' : ''), 'aria-label': k === ' ' ? 'space' : k === '⌫' ? 'delete' : k, onclick: () => { const cur = T.ans[T.i] || ''; put(k === '⌫' ? cur.slice(0, -1) : (cur + k).slice(0, 14)); } }, k === ' ' ? '␣' : k))));
+        setKey(e => { if (/^[0-9.\/]$/.test(e.key) || e.key === '-' || e.key === ' ') { put(((T.ans[T.i] || '') + (e.key === '-' ? MINUS : e.key)).slice(0, 14)); e.preventDefault(); } else if (e.key === 'Backspace') { put((T.ans[T.i] || '').slice(0, -1)); } else if (e.key === 'Enter') { next(); } });
+      }
+    }
+    foot.append(h('button', { class: 'btn', disabled: T.i === 0, onclick: () => { T.i--; draw(); } }, 'Back'), h('button', { class: 'btn primary', onclick: next }, T.i === T.items.length - 1 ? 'Finish' : 'Next'));
+  };
+  const next = () => { if (T.i < T.items.length - 1) { T.i++; draw(); } else { setKey(null); finishNumeracy(T); } };
+  wrap.append(topTest('Numeracy · ' + T.l.name, phaseLabel(T.phase) + ' · Form ' + T.form + ' · Level ' + T.level, () => { closeTest(); }), bar, body, foot);
+  openTest(wrap); draw();
+}
+function paperView(T) {
+  const wrap = h('div', { class: 'tview' }); const inputs = [];
+  const list = h('div', { class: 'plist' }, T.items.map((it, i) => h('div', { class: 'prow' }, h('span', { class: 'pn' }, it.no), h('div', { class: 'pq' }, it.big ? h('div', { class: 'bigemo sm' }, it.big) : null, h('div', {}, richText(it.q)),
+    it.t === 'mc' ? h('div', { class: 'opts sm' }, it.opts.map(o => h('button', { class: 'opt', onclick: e => { T.ans[i] = o; [...e.currentTarget.parentNode.children].forEach(c => c.classList.remove('on')); e.currentTarget.classList.add('on'); } }, o)))
+      : (() => { const inp = h('input', { type: 'text', inputmode: 'text', autocomplete: 'off', 'aria-label': 'Answer for item ' + it.no, oninput: e => { T.ans[i] = e.target.value.replace(/-/g, MINUS); } }); inputs.push(inp); return inp; })()))));
+  wrap.append(topTest('Enter answers · ' + T.l.name, phaseLabel(T.phase) + ' · Form ' + T.form + ' · Level ' + T.level), h('div', { class: 'tbody scroll' }, h('p', { class: 'sub' }, 'Type what the learner wrote. Leave blank if there is no answer. Use / for fractions, e.g. 3/4.'), list),
+    h('div', { class: 'tfoot' }, h('button', { class: 'btn primary wide', onclick: () => finishNumeracy(T) }, 'Score this test')));
+  openTest(wrap);
+}
+function printNum(l, phase, level) {
+  const form = phase === 'pre' ? 'A' : 'B'; const items = genNumeracy(l.id, form, level); const root = $('#printRoot'); root.innerHTML = '';
+  root.append(h('h2', {}, 'Numeracy ' + phaseLabel(phase).toLowerCase() + ' · Level ' + level), h('p', {}, 'Name: ' + l.name + '      Grade: ' + l.grade + '      Date: ' + todayISO() + '      Form ' + form),
+    h('ol', { class: 'pitems' }, items.map(it => h('li', {}, it.big ? h('div', { class: 'bigemo sm' }, it.big) : null, h('div', {}, richText(it.q)), it.t === 'mc' ? h('div', {}, it.opts.map(o => '☐ ' + o + '    ')) : h('div', { class: 'pline' }, 'Answer: ____________')))));
+  document.body.classList.add('printing-test'); setTimeout(() => { window.print(); document.body.classList.remove('printing-test'); }, 100);
+}
+function finishNumeracy(T) {
+  setKey(null);
+  const marks = T.items.map((it, i) => isCorrect(it, T.ans[i])); const raw = marks.filter(Boolean).length; const total = T.items.length; const pct = round1(raw / total * 100);
+  const fl = h('input', { type: 'number', min: '0', max: '99', inputmode: 'numeric', placeholder: 'Optional' });
+  const wrap = h('div', { class: 'tview' });
+  const res = {
+    key: rkey(T.l.id, 'numeracy', T.phase), learner_id: T.l.id, tutor_id: P.session.tutor_id, school: T.l.school, grade: T.l.grade, domain: 'numeracy', phase: T.phase, form: T.form, test_level: T.level,
+    answers: T.ans.map(a => String(a || '').replace(/[;|]/g, '')).join(';'), raw, total, pct, reading_level: '', fluency: '', mic_n: '', mic_agree: '', lang: '', mode: T.mode, date: todayISO(), duration_s: Math.round((Date.now() - T.t0) / 1000)
+  };
+  wrap.append(h('div', { class: 'tbody scroll' }, h('div', { class: 'score' }, raw === total ? h('span', { class: 'star', 'aria-hidden': 'true' }, '★') : null, h('div', { class: 'big' }, raw + ' / ' + total), h('p', {}, T.l.name + ' · ' + Math.round(pct) + '%')),
+    h('div', { class: 'marks' }, T.items.map((it, i) => h('span', { class: 'mk ' + (marks[i] ? 'good' : 'bad'), title: 'Item ' + it.no }, marks[i] ? it.no : '○' + it.no))),
+    h('p', { class: 'sub' }, 'A ○ marks an item to review with the learner. Correct answers are not shown so Form ' + (T.phase === 'pre' ? 'A' : 'B') + ' stays fair.'),
+    h('label', { class: 'fld' }, h('span', {}, 'Addition facts in 1 minute (optional, timed by you)'), fl)),
+    h('div', { class: 'tfoot' }, h('button', { class: 'btn', onclick: () => { runNumeracy(T.l, T.phase, T.level, T.mode); } }, 'Redo'), h('button', { class: 'btn primary', onclick: () => { res.fluency = fl.value === '' ? '' : Number(fl.value); addOp('result', res); toast('Saved'); closeTest(); } }, 'Save result')));
+  openTest(wrap);
+}
+
+/* ================= READING TEST ================= */
+function sheetReadLaunch(id) {
+  const l = learnerById(id); const phase = S.phase; let lang = 'en';
+  const lb = h('div', { class: 'seg' }, [['en', 'English'], ['fil', 'Filipino']].map(([k, t]) => h('button', { class: k === lang ? 'on' : '', onclick: e => { lang = k; [...lb.children].forEach(c => c.classList.remove('on')); e.currentTarget.classList.add('on'); upd(); } }, t)));
+  const st = h('select', {}, READ_LEVELS.map(x => h('option', { value: x.lv, selected: x.lv === defaultStartLevel(Number(l.grade)) }, 'Level ' + x.lv + ' · ' + x.name)));
+  const warn = h('div', {}); const upd = () => { warn.innerHTML = ''; const have = D().results[rkey(id, 'reading_' + lang, phase)]; if (have) warn.append(h('p', { class: 'warn' }, 'Already has a ' + phaseLabel(phase).toLowerCase() + ' reading result (' + resLine(have) + '). Starting again replaces it.')); }; upd();
+  openSheet(h('div', { class: 'stack' }, h('h2', {}, 'Reading ' + phaseLabel(phase).toLowerCase()), h('p', { class: 'sub' }, l.name + ' · Grade ' + l.grade + ' · Form ' + (phase === 'pre' ? 'A' : 'B')),
+    h('label', { class: 'fld' }, h('span', {}, 'Language'), lb), h('label', { class: 'fld' }, h('span', {}, 'Start at'), st), h('p', { class: 'hint' }, 'The learner reads aloud. You tap ✔ or ✘. If the learner passes a level the test goes up; if not, it goes down, until the highest level passed is found.'), warn,
+    h('button', { class: 'btn primary wide', onclick: () => { closeSheet(); runReading(l, phase, lang, Number(st.value)); } }, 'Start')));
+}
+function runReading(l, phase, lang, start) {
+  const form = phase === 'pre' ? 'A' : 'B'; const bank = READING[lang][form];
+  const R = { l, phase, lang, form, done: {}, lv: start, marks: [], mic: [], idx: 0, miscues: 0, t0: Date.now(), micN: 0, micAgree: 0, log: {} };
+  const wrap = h('div', { class: 'tview' }); const body = h('div', { class: 'tbody' }); const foot = h('div', { class: 'tfoot' }); const bar = h('div', { class: 'prog' }, h('i', {}));
+  const lvInfo = () => READ_LEVELS[R.lv - 1];
+  const draw = () => {
+    setKey(null); body.innerHTML = ''; foot.innerHTML = ''; const info = lvInfo(); const items = bank[R.lv];
+    if (R.lv === 5) {
+      const text = items[0]; const words = wordCount(text);
+      bar.firstChild.style.width = '80%';
+      body.append(h('div', { class: 'cnt' }, 'Level 5 · Paragraph · ' + words + ' words'), h('div', { class: 'passage' }, text), h('div', { class: 'stepper' }, h('span', {}, 'Words read wrong or skipped'), h('button', { class: 'btn', onclick: () => { R.miscues = Math.max(0, R.miscues - 1); draw(); }, 'aria-label': 'Fewer' }, '−'), h('strong', {}, R.miscues), h('button', { class: 'btn', onclick: () => { R.miscues = Math.min(words, R.miscues + 1); draw(); }, 'aria-label': 'More' }, '+')),
+        h('p', { class: 'hint' }, 'Accuracy: ' + Math.round((words - R.miscues) / words * 100) + '%. Passing needs ' + Math.round(PARA_PASS * 100) + '% or more.'));
+      foot.append(h('button', { class: 'btn primary wide', onclick: () => endLevel() }, 'Finish level'));
+      return;
+    }
+    const n = items.length; const i = R.idx; bar.firstChild.style.width = ((R.lv - 1) * 20 + (i / n) * 20) + '%'; const text = items[i];
+    const micBox = h('div', { class: 'micbox' }); const cur = R.mic[i];
+    if (cur != null && cur !== '-') micBox.append(h('small', {}, 'Mic heard: “' + (R.heard && R.heard[i] || '') + '” · suggests ' + (cur === 1 ? '✔' : '✘')));
+    body.append(h('div', { class: 'cnt' }, 'Level ' + R.lv + ' · ' + info.name + ' · ' + (i + 1) + ' of ' + n + ' (needs ' + info.need + ')'), h('div', { class: 'readtext' + (R.lv >= 4 ? ' long' : '') }, text),
+      h('button', { class: 'btn mic', onclick: () => listen(R, text, i, draw) }, '🎤 Listen (optional)'), micBox);
+    foot.append(h('button', { class: 'btn bad', onclick: () => mark(0) }, '✘ Not yet'), h('button', { class: 'btn good', onclick: () => mark(1) }, '✔ Correct'));
+    if (isDesktop()) { body.append(h('p', { class: 'hint center' }, 'Keyboard: Y or Enter = Correct, N = Not yet')); setKey(e => { const k = String(e.key).toLowerCase(); if (k === 'y' || k === 'enter') { e.preventDefault(); mark(1); } else if (k === 'n') { e.preventDefault(); mark(0); } }); }
+  };
+  const mark = v => { R.marks[R.idx] = v; const m = R.mic[R.idx]; if (m === 0 || m === 1) { R.micN++; if (m === v) R.micAgree++; } if (R.idx < bank[R.lv].length - 1) { R.idx++; draw(); } else endLevel(); };
+  const endLevel = () => {
+    const ok = levelPassed(R.lv, R.marks, R.lv === 5 ? wordCount(bank[5][0]) : 0, R.miscues); R.done[R.lv] = ok; R.done.__last = R.lv;
+    R.log[R.lv] = R.lv === 5 ? 'm' + R.miscues : R.marks.map(x => x ? 1 : 0).join('');
+    const nx = nextReadingLevel(R.done);
+    if (nx == null) { finishReading(R); return; }
+    R.lv = nx; R.idx = 0; R.marks = []; R.mic = []; R.heard = []; R.miscues = 0; draw();
+  };
+  wrap.append(topTest('Reading · ' + l.name, READING[lang].label + ' · ' + phaseLabel(phase) + ' · Form ' + form), bar, body, foot);
+  openTest(wrap); draw();
+}
+function listen(R, target, i, redraw) {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { toast('Microphone check needs Chrome with internet. Use ✔ or ✘ instead.', 3500); return; }
+  const rec = new SR(); rec.lang = READING[R.lang].mic; rec.interimResults = false; rec.maxAlternatives = 3; toast('Listening… let the learner read now', 3000);
+  rec.onresult = e => { const alts = []; for (let k = 0; k < e.results[0].length; k++) alts.push(e.results[0][k].transcript); let best = 0; alts.forEach(a => { const s = micSuggest(target, a); if (s === 1) best = 1; }); R.mic[i] = best; (R.heard = R.heard || [])[i] = alts[0]; redraw(); };
+  rec.onerror = () => toast('Could not hear clearly. Try again or use ✔ / ✘.', 3000);
+  try { rec.start(); } catch (e) { /* already listening */ }
+}
+function finishReading(R) {
+  const lvl = finalReadingLevel(R.done); const wrap = h('div', { class: 'tview' });
+  const answers = Object.keys(R.log).sort().map(k => 'L' + k + ':' + R.log[k]).join(';');
+  const res = { key: rkey(R.l.id, 'reading_' + R.lang, R.phase), learner_id: R.l.id, tutor_id: P.session.tutor_id, school: R.l.school, grade: R.l.grade, domain: 'reading_' + R.lang, phase: R.phase, form: R.form, test_level: '', answers, raw: lvl, total: 5, pct: lvl / 5 * 100, reading_level: lvl, fluency: '', mic_n: R.micN, mic_agree: R.micAgree, lang: R.lang, mode: 'tutor', date: todayISO(), duration_s: Math.round((Date.now() - R.t0) / 1000) };
+  wrap.append(h('div', { class: 'tbody scroll' }, h('div', { class: 'score' }, lvl === 5 ? h('span', { class: 'star', 'aria-hidden': 'true' }, '★') : null, h('div', { class: 'big' }, 'Level ' + lvl), h('p', {}, R.l.name + ' · ' + READING[R.lang].label + (lvl === 0 ? ' · below Level 1' : ' · ' + READ_LEVELS[lvl - 1].name))),
+    h('div', { class: 'ladder' }, READ_LEVELS.map(x => h('div', { class: 'rung ' + (R.done[x.lv] === true ? 'good' : R.done[x.lv] === false ? 'bad' : 'skip') }, h('b', {}, x.lv), h('span', {}, x.name), h('em', {}, R.done[x.lv] === true ? 'passed' : R.done[x.lv] === false ? 'not yet' : 'not tested')))),
+    R.micN ? h('p', { class: 'sub' }, 'The microphone agreed with your marks on ' + R.micAgree + ' of ' + R.micN + ' items.') : null),
+    h('div', { class: 'tfoot' }, h('button', { class: 'btn', onclick: () => runReading(R.l, R.phase, R.lang, defaultStartLevel(Number(R.l.grade))) }, 'Redo'), h('button', { class: 'btn primary', onclick: () => { addOp('result', res); toast('Saved'); closeTest(); } }, 'Save result')));
+  openTest(wrap);
+}
+
+/* ================= TODAY (SESSION LOG) ================= */
+function lastEntry(lid, dom) { const e = D().tracker.filter(t => t.learner_id === lid && t.domain === dom && !Number(t.absent)).sort((a, b) => (a.date + a.created_at < b.date + b.created_at ? -1 : 1)); return e[e.length - 1]; }
+function scrSession() {
+  const date = S.date || todayISO(); const box = h('div', { class: 'stack' });
+  const dateIn = h('input', { type: 'date', value: date, onchange: e => { S.date = e.target.value || todayISO(); render(); } });
+  const seg = h('div', { class: 'seg' }, [['math', 'Math worksheets'], ['reading', 'Reading']].map(([k, t]) => h('button', { class: S.sdom === k ? 'on' : '', onclick: () => { S.sdom = k; render(); } }, t)));
+  const L = activeLearners(); const todays = D().tracker.filter(t => t.date === date);
+  const presentIds = new Set(todays.filter(t => !Number(t.absent)).map(t => t.learner_id));
+  box.append(legend(), h('div', { class: 'sumline' }, h('strong', {}, 'Session log'), h('span', {}, presentIds.size + ' present · ' + todays.filter(t => Number(t.absent)).length + ' absent')), h('div', { class: 'two' }, h('label', { class: 'fld' }, h('span', {}, 'Date'), dateIn), h('div', { class: 'fld' }, h('span', {}, 'Subject'), seg)));
+  if (!L.length) { box.append(h('div', { class: 'empty' }, h('p', {}, 'Add learners first.'), h('button', { class: 'btn primary', onclick: () => { S.tab = 'learners'; render(); } }, 'Go to Learners'))); return box; }
+  L.forEach(l => {
+    const mine = todays.filter(t => t.learner_id === l.id && t.domain === S.sdom); const absent = todays.some(t => t.learner_id === l.id && Number(t.absent));
+    const stars = mine.filter(t => !Number(t.absent) && !Number(t.tri) && !Number(t.circ)).length; const le = lastEntry(l.id, S.sdom);
+    const open = S.openRow === l.id;
+    box.append(h('div', { class: 'srow' + (open ? ' open' : '') },
+      h('button', { class: 'shead', onclick: () => { S.openRow = open ? null : l.id; render(); } }, h('span', { class: 'av ' + (l.group === 'pullout' ? 'pull' : '') }, initials(l.name)), h('span', { class: 'rn' }, h('strong', {}, l.name), h('small', {}, le ? 'Last: worksheet ' + le.worksheet + (Number(le.tri) || Number(le.circ) ? ' (needs redo)' : ' ★') : 'No entries yet')),
+        h('span', { class: 'chips' }, absent ? h('i', { class: 'chip bad' }, 'Absent') : mine.length ? h('i', { class: 'chip ok' }, stars + '★ ' + (mine.length - stars) + ' redo') : null)),
+      open ? sessionPanel(l, date) : null));
+  });
+  return box;
+}
+function sessionPanel(l, date) {
+  const dom = S.sdom; const le = lastEntry(l.id, dom); let ws = le ? (Number(le.tri) || Number(le.circ) ? Number(le.worksheet) : Number(le.worksheet) + 1) : 1; let tri = 0, circ = 0, ret = 0;
+  const val = (get, set, min, max, label, glyph) => { const s = h('strong', {}, String(get())); return h('div', { class: 'stepper' }, h('span', {}, label), h('button', { class: 'btn', 'aria-label': 'Less ' + label, onclick: () => { set(Math.max(min, get() - 1)); s.textContent = get(); upd(); } }, '−'), s, h('button', { class: 'btn', 'aria-label': 'More ' + label, onclick: () => { set(Math.min(max, get() + 1)); s.textContent = get(); upd(); } }, '+')); };
+  const status = h('div', { class: 'stat' }); const upd = () => { status.className = 'stat ' + (tri || circ ? 'redo' : 'perfect'); status.textContent = tri || circ ? 'Needs redo: ' + tri + ' △  ' + circ + ' ○' : '★ Perfect, all items correct'; }; upd();
+  const mk = absent => addOp('tracker', { entry_id: uid(), learner_id: l.id, tutor_id: P.session.tutor_id, date, domain: dom, worksheet: absent ? '' : ws, tri: absent ? 0 : tri, circ: absent ? 0 : circ, retries: absent ? 0 : ret, absent: absent ? 1 : 0, note: '', created_at: new Date().toISOString() });
+  return h('div', { class: 'spanel' }, val(() => ws, v => { ws = v; }, 1, 999, 'Worksheet no.'), val(() => tri, v => { tri = v; }, 0, 99, '△ partly correct'), val(() => circ, v => { circ = v; }, 0, 99, '○ wrong'), val(() => ret, v => { ret = v; }, 0, 20, 'Redo rounds'), status,
+    h('div', { class: 'two' }, h('button', { class: 'btn', onclick: () => { mk(true); S.openRow = null; render(); toast(l.name + ' marked absent'); } }, 'Absent'), h('button', { class: 'btn primary', onclick: () => { mk(false); S.openRow = null; render(); toast('Saved worksheet ' + ws); } }, 'Save worksheet')));
+}
+
+/* ================= REPORT ================= */
+function metrics() {
+  const rows = activeLearners().map(l => {
+    const R = resultsFor(l.id); const n = R.numeracy || {}; const rd = R.reading_en && R.reading_en.pre ? 'reading_en' : R.reading_fil && R.reading_fil.pre ? 'reading_fil' : (R.reading_en ? 'reading_en' : R.reading_fil ? 'reading_fil' : null);
+    const r = rd ? R[rd] : {}; const tr = D().tracker.filter(t => t.learner_id === l.id);
+    const mx = d => Math.max(0, ...tr.filter(t => t.domain === d && !Number(t.absent) && t.worksheet !== '').map(t => Number(t.worksheet)));
+    const days = new Set(tr.filter(t => !Number(t.absent)).map(t => t.date)).size; const abs = new Set(tr.filter(t => Number(t.absent)).map(t => t.date)).size;
+    return { l, nPre: n.pre ? n.pre.pct : null, nPost: n.post ? n.post.pct : null, rLang: rd, rPre: r.pre ? r.pre.reading_level : null, rPost: r.post ? r.post.reading_level : null, wsMath: mx('math'), wsRead: mx('reading'), days, abs };
+  });
+  return rows;
+}
+const avg = a => (a.length ? round1(a.reduce((x, y) => x + y, 0) / a.length) : null);
+function scrReport() {
+  const rows = metrics(); const box = h('div', { class: 'stack' });
+  const nPairs = rows.filter(r => r.nPre != null && r.nPost != null); const rPairs = rows.filter(r => r.rPre != null && r.rPost != null);
+  const nGain = avg(nPairs.map(r => r.nPost - r.nPre)); const rGain = avg(rPairs.map(r => r.rPost - r.rPre));
+  const card = (t, v, s) => h('div', { class: 'stat-card' }, h('small', {}, t), h('strong', {}, v), h('span', {}, s));
+  box.append(h('h2', {}, 'My learners’ progress'),
+    h('div', { class: 'cards' }, card('Numeracy gain', nGain == null ? '—' : (nGain > 0 ? '+' : '') + nGain + ' pts', nPairs.length + ' learners with both tests'), card('Reading gain', rGain == null ? '—' : (rGain > 0 ? '+' : '') + rGain + ' levels', rPairs.length + ' learners with both tests'),
+      card('Improved in numeracy', nPairs.length ? Math.round(nPairs.filter(r => r.nPost > r.nPre).length / nPairs.length * 100) + '%' : '—', 'scored higher on the posttest'), card('Moved up in reading', rPairs.length ? Math.round(rPairs.filter(r => r.rPost > r.rPre).length / rPairs.length * 100) + '%' : '—', 'reached a higher level')),
+    h('div', { class: 'two' }, h('button', { class: 'btn', onclick: downloadCSV }, 'Download CSV'), h('button', { class: 'btn primary', onclick: printReport }, 'Print or save as PDF')));
+  if (!rows.length) box.append(h('p', { class: 'sub' }, 'Add learners and run the pretest to see progress here.'));
+  else box.append(h('div', { class: 'scrollx' }, reportTable(rows)));
+  box.append(h('p', { class: 'hint' }, 'Numeracy gain is in percentage points. Reading level goes from 0 to 5. Reports are built on this phone, so nothing extra is stored online.'));
+  return box;
+}
+function fmtGain(a, b, u) { if (a == null || b == null) return '—'; const g = round1(b - a); return (g > 0 ? '+' : '') + g + (u || ''); }
+function reportTable(rows) {
+  return h('table', { class: 'rep' }, h('thead', {}, h('tr', {}, ['Learner', 'Gr', 'Num pre', 'Num post', 'Gain', 'Read pre', 'Read post', 'Gain', 'WS math', 'Days'].map(t => h('th', {}, t)))),
+    h('tbody', {}, rows.map(r => h('tr', {}, h('th', {}, r.l.name), h('td', {}, r.l.grade), h('td', {}, r.nPre == null ? '—' : Math.round(r.nPre) + '%'), h('td', {}, r.nPost == null ? '—' : Math.round(r.nPost) + '%'), h('td', { class: gainCls(r.nPre, r.nPost) }, fmtGain(r.nPre, r.nPost)),
+      h('td', {}, r.rPre == null ? '—' : r.rPre), h('td', {}, r.rPost == null ? '—' : r.rPost), h('td', { class: gainCls(r.rPre, r.rPost) }, fmtGain(r.rPre, r.rPost)), h('td', {}, r.wsMath || '—'), h('td', {}, r.days)))));
+}
+const gainCls = (a, b) => (a == null || b == null ? '' : b > a ? 'up' : b < a ? 'down' : '');
+function csvCell(v) { v = v == null ? '' : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+function downloadCSV() {
+  const head = ['learner_code', 'name', 'school', 'grade', 'group', 'numeracy_pre_pct', 'numeracy_post_pct', 'numeracy_gain', 'reading_language', 'reading_pre_level', 'reading_post_level', 'reading_gain', 'max_math_worksheet', 'max_reading_worksheet', 'days_present', 'days_absent'];
+  const lines = [head.join(',')]; metrics().forEach(r => lines.push([r.l.id, r.l.name, r.l.school, r.l.grade, r.l.group, r.nPre == null ? '' : round1(r.nPre), r.nPost == null ? '' : round1(r.nPost), r.nPre != null && r.nPost != null ? round1(r.nPost - r.nPre) : '', r.rLang || '', r.rPre == null ? '' : r.rPre, r.rPost == null ? '' : r.rPost, r.rPre != null && r.rPost != null ? r.rPost - r.rPre : '', r.wsMath || '', r.wsRead || '', r.days, r.abs].map(csvCell).join(',')));
+  const blob = new Blob(['\ufeff' + lines.join('\n')], { type: 'text/csv;charset=utf-8' }); const a = h('a', { href: URL.createObjectURL(blob), download: 'ARAL-progress-' + P.session.tutor_id + '-' + todayISO() + '.csv' }); document.body.append(a); a.click(); a.remove();
+}
+function printReport() {
+  const root = $('#printRoot'); root.innerHTML = '';
+  root.append(h('h2', {}, 'ARAL progress report'), h('p', {}, P.session.name + ' · ' + P.session.tutor_id + ' · ' + (distByCode(P.session.district) || {}).name + ' · ' + todayISO()), reportTable(metrics()), h('p', {}, 'Numeracy in % of items correct. Reading level 0 to 5. WS math = highest worksheet number reached.'));
+  document.body.classList.add('printing-test'); setTimeout(() => { window.print(); document.body.classList.remove('printing-test'); }, 100);
+}
+
+/* ================= ACCOUNT ================= */
+function scrAccount() {
+  const d = D(); const dist = distByCode(P.session.district);
+  return h('div', { class: 'stack' }, h('h2', {}, 'Account'),
+    h('div', { class: 'kv' }, h('span', {}, 'Name'), h('strong', {}, P.session.name), h('span', {}, 'Tutor code'), h('strong', {}, P.session.tutor_id), h('span', {}, 'District'), h('strong', {}, dist ? dist.name : ''), h('span', {}, 'Waiting to send'), h('strong', {}, String(d.queue.length)), h('span', {}, 'Last refreshed from server'), h('strong', {}, d.pulledAt ? new Date(d.pulledAt).toLocaleString() : 'Never')),
+    h('button', { class: 'btn primary wide', onclick: async e => { e.currentTarget.disabled = true; const ok = await sync(true); render(); toast(ok ? 'Everything is up to date' : 'No signal. Your work is safe on this phone.'); } }, 'Send and refresh now'),
+    h('div', { class: 'two' }, h('button', { class: 'btn', onclick: () => { S.phase = 'pre'; S.tab = 'learners'; render(); } }, 'Open Pretest'), h('button', { class: 'btn', onclick: () => { S.phase = 'post'; S.tab = 'learners'; render(); } }, 'Open Posttest')),
+    h('button', { class: 'btn wide', onclick: () => sheetHelp() }, 'How to use this app'),
+    h('button', { class: 'btn danger wide', onclick: () => logout(false) }, 'Sign out'),
+    h('p', { class: 'hint' }, 'Version ' + CONFIG.VERSION + '. Your work is saved on this phone first and sent when there is signal. Learner names are only in your district sheet; Division reports use learner codes.'));
+}
+
+
+/* ================= HELP ================= */
+const G = {
+  star: '<svg viewBox="0 0 28 28" width="26" height="26" aria-hidden="true"><path d="M14 2l3.5 7.6 8.3.9-6.2 5.6 1.8 8.2L14 20l-7.4 4.3 1.8-8.2L2.2 10.5l8.3-.9z" fill="#F0B323"/></svg>',
+  tri: '<svg viewBox="0 0 28 28" width="26" height="26" aria-hidden="true"><path d="M14 4l11 19H3z" fill="none" stroke="#12284A" stroke-width="2.4" stroke-linejoin="round"/></svg>',
+  circ: '<svg viewBox="0 0 28 28" width="26" height="26" aria-hidden="true"><circle cx="14" cy="14" r="10" fill="none" stroke="#D2473A" stroke-width="2.4"/></svg>'
+};
+const glyph = k => h('span', { class: 'glyph', html: G[k] });
+function legend() {
+  return h('button', { class: 'legend', onclick: () => sheetHelp('marks'), 'aria-label': 'What do the star, triangle and circle mean?' },
+    h('span', {}, glyph('star'), 'all correct'), h('span', {}, glyph('tri'), 'partly correct'), h('span', {}, glyph('circ'), 'wrong'), h('em', {}, 'What do these mean?'));
+}
+function sheetHelp(open) {
+  const sec = (id, title, ...body) => h('details', { open: open === id ? true : null }, h('summary', {}, title), h('div', { class: 'hbody' }, ...body));
+  const row = (k, t, d) => h('div', { class: 'mrow' }, glyph(k), h('div', {}, h('strong', {}, t), h('p', {}, d)));
+  openSheet(h('div', { class: 'stack' }, h('h2', {}, 'How to use this app'),
+    sec('marks', 'The star, triangle and circle', h('p', { class: 'sub' }, 'These are the same marks you use on the learners’ worksheets, from the ARAL Tutor’s Guide.'),
+      row('star', 'Star: all items correct', 'Draw a star at the top of the worksheet when every item is right. In the app: leave △ and ○ at 0 and tap Save worksheet.'),
+      row('tri', 'Triangle: partly correct', 'Draw it on an item that is incomplete, has a spelling mistake, has no answer, or did not follow the instructions. Count your triangles and put the number in “△ partly correct”.'),
+      row('circ', 'Circle: wrong', 'Draw it on an item that is wrong. Count your circles and put the number in “○ wrong”.'),
+      h('p', {}, 'The learner redoes every △ and ○ item until it is right, then you cross the mark out. Save the worksheet again with 0 and 0 and it becomes a star. A learner moves to the next worksheet only after a star.'),
+      h('p', {}, 'Do not give answers or reteach. Ask guiding questions and point the learner back to an easier worksheet.')),
+    sec('daily', 'Every day (Today tab)',
+      h('ol', {}, h('li', {}, 'Open Today and pick the date and subject.'), h('li', {}, 'Tap a learner. Set the worksheet number (it starts at the next one).'), h('li', {}, 'Set △ and ○ from your checking. Tap Save worksheet, or Absent.'))),
+    sec('tests', 'Pretest and posttest',
+      h('p', {}, 'Do the Pretest at the start and the Posttest at the end of the program. The app opens on Posttest from December 1. You can switch at the top of Learners.'),
+      h('p', {}, h('strong', {}, 'Numeracy: '), 'Tap a learner, then Numeracy. Choose a lower level for a learner who is behind. The learner answers on the phone, or you type answers from paper. A ○ in the result means review that item. Correct answers are not shown so the posttest stays fair.'),
+      h('p', {}, h('strong', {}, 'Reading: '), 'The learner reads aloud. Tap ✔ Correct or ✘ Not yet. If the learner passes a level the test goes up, if not it goes down, to find the highest level passed (0 to 5). The microphone button is optional and only a suggestion; your ✔ or ✘ counts.')),
+    sec('offline', 'No signal?',
+      h('p', {}, 'Everything is saved on your phone first. The top right says “n waiting to send” until there is signal, then it sends by itself. You can also open Account and tap Send and refresh now.')),
+    sec('pin', 'Your tutor code and PIN',
+      h('p', {}, 'Write down your tutor code and your 4-digit PIN. If you forget them, tap “Forgot my code or PIN” on the sign-in page and type your full name and school.')),
+    h('button', { class: 'btn primary wide', onclick: closeSheet }, 'Close')));
+}
+
+/* ================= BOOT ================= */
+function boot() { render(); if (P.session) sync(); }
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+
+</script>
+</body>
+</html>
