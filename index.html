@@ -47,6 +47,7 @@ details{border:1px solid var(--line);border-radius:var(--r);background:#fff}summ
 .btn.bad{background:var(--card);border-color:var(--coral);color:var(--coral);font-size:20px;flex:1}
 .btn.mic{border-style:dashed;border-color:var(--ink2);color:var(--ink2);font-weight:400;align-self:center}
 .btn.wide{width:100%}
+a.btn{text-decoration:none;color:var(--ink)}
 .stack.tight{gap:8px}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .two>.fld{min-width:0}
@@ -136,6 +137,7 @@ table.mini{width:100%;border-collapse:collapse;font-size:14px}.mini th,.mini td{
 .srow{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}.srow.open{border-color:var(--sea)}
 .shead{width:100%;border:0;background:transparent;display:flex;align-items:center;gap:12px;padding:12px;text-align:left;cursor:pointer}
 .spanel{padding:4px 12px 14px;display:flex;flex-direction:column;gap:10px;background:#F8FAFC;border-top:1px solid var(--line)}
+.wstitle{padding:8px 12px;border-left:4px solid var(--sea);background:var(--sea-l);border-radius:8px;font-weight:700;color:var(--sea-d)}
 .stat{padding:10px 12px;border-radius:10px;font-weight:700;text-align:center}.stat.perfect{background:var(--sun-l);color:#7A5600}.stat.redo{background:var(--coral-l);color:var(--coral)}
 
 /* report */
@@ -238,16 +240,60 @@ const GEN = {
     const s = 2 * r.int(1, 20); return num(s + ', ' + (s + 2) + ', ___, ' + (s + 6), s + 4);
   },
   cmp(r, p, i) {
-    let a, b; do { a = r.int(1, 99); b = r.int(1, 99); } while (a === b || Math.abs(a - b) < 2);
+    const mx = p.max || 99; let a, b; do { a = r.int(1, mx); b = r.int(1, mx); } while (a === b || Math.abs(a - b) < (mx > 99 ? 10 : 2));
     const greater = i % 2 === 0; const ans = greater ? Math.max(a, b) : Math.min(a, b);
     return { q: greater ? 'Which number is greater?' : 'Which number is less?', t: 'mc', opts: r.shuffle([String(a), String(b)]), a: String(ans), v: null };
   },
-  numword(r) {
-    let n; do { n = r.int(21, 98); } while (n % 10 === 0);
+  numword(r, p) {
+    let n; do { n = r.int(p.lo || 21, p.hi || 98); } while (n % 10 === 0);
     const sw = (n % 10) * 10 + Math.floor(n / 10); const cands = [numToWords(n), numToWords(sw), numToWords(n + 10 > 99 ? n - 10 : n + 10), numToWords(n % 10 === 9 ? n - 1 : n + 1)];
     const opts = []; cands.forEach(c => { if (c && !opts.includes(c)) opts.push(c); });
     return { q: 'Which is the number word for ' + n + '?', t: 'mc', opts: r.shuffle(opts.slice(0, 4)), a: numToWords(n), v: null };
   },
+  order(r) {
+    const base = []; while (base.length < 3) { const v = r.int(10, 99); if (base.indexOf(v) < 0) base.push(v); }
+    const asc = base.slice().sort((a, b) => a - b); const bad1 = [asc[1], asc[0], asc[2]]; const bad2 = [asc[2], asc[1], asc[0]];
+    const opts = r.shuffle([asc.join(', '), bad1.join(', '), bad2.join(', ')]);
+    return { q: 'Which list is in increasing order (smallest to biggest)?', t: 'mc', opts, a: asc.join(', '), v: null };
+  },
+  seqstep(r) { const st = r.pick([2, 5, 10]); const s = st * r.int(1, 9); const arr = [s, s + st, s + 2 * st, s + 3 * st, s + 4 * st]; const k = r.int(1, 3); const ans = arr[k]; arr[k] = '___'; return num(arr.join(', '), ans); },
+  add3(r) { const a = r.int(2, 9), b = r.int(2, 9), c = r.int(2, 9); return num(a + ' + ' + b + ' + ' + c + ' =', a + b + c); },
+  place(r, p) { const nd = p.digits || 3; const d = []; for (let k = 0; k < nd; k++) d.push(r.int(1, 9)); const pos = r.int(0, nd - 1); const n = Number(d.join('')); const names = ['ones', 'tens', 'hundreds', 'thousands', 'ten thousands'].slice(0, nd).reverse(); return num('In ' + fmtInt(n) + ', what is the value of the digit ' + d[pos] + '? (The digit is in the ' + names[pos] + ' place.)', d[pos] * Math.pow(10, nd - 1 - pos)); },
+  pattern(r) { const st = r.pick([2, 3, 4, 5, 10]); const s = r.int(1, 8) * st; const arr = [s, s + st, s + 2 * st, s + 3 * st, s + 4 * st]; const k = r.int(1, 3); const ans = arr[k]; arr[k] = '___'; return num(arr.join(', '), ans); },
+  round(r, p) { const unit = { ten: 10, hundred: 100, thousand: 1000 }[p.to]; let n; do { n = r.int(p.lo || 1000, p.hi || 99999); } while (n % unit === 0); return num('Round ' + fmtInt(n) + ' to the nearest ' + p.to + '.', Math.round(n / unit) * unit); },
+  fraccmp(r) {
+    const pr = r.pick([[2, 3], [3, 4], [4, 5], [3, 5], [5, 6], [2, 5], [3, 8], [4, 7], [5, 8]]); let n1, n2; do { n1 = r.int(1, pr[0] - 1); n2 = r.int(1, pr[1] - 1); } while (n1 * pr[1] === n2 * pr[0]);
+    const A = n1 + '/' + pr[0], B = n2 + '/' + pr[1]; return { q: 'Which fraction is greater?', t: 'mc', opts: r.shuffle([A, B]), a: n1 * pr[1] > n2 * pr[0] ? A : B, v: null };
+  },
+  divr(r, p, i) { const d = r.int(p.d[0], p.d[1]); const qq = r.int(p.q[0], p.q[1]); const rem = r.int(1, d - 1); const a = d * qq + rem; return i % 2 === 0 ? num('What is the quotient when ' + fmtInt(a) + ' is divided by ' + d + '? (Do not include the remainder.)', qq) : num('What is the remainder when ' + fmtInt(a) + ' is divided by ' + d + '?', rem); },
+  divten(r, p) { const d = r.pick(p.dList || [10, 100]); const qq = r.int(2, 99); return num(fmtInt(qq * d) + ' \u00F7 ' + d + ' =', qq); },
+  gcf(r) { let gg, m, n; do { gg = r.int(2, 9); m = r.int(2, 9); n = r.int(2, 9); } while (gcd(m, n) !== 1 || m === n); return num('What is the greatest common factor (GCF) of ' + gg * m + ' and ' + gg * n + '?', gg); },
+  lcm(r) { let a, b; do { a = r.int(2, 12); b = r.int(2, 12); } while (a === b || a * b / gcd(a, b) > 90); return num('What is the least common multiple (LCM) of ' + a + ' and ' + b + '?', a * b / gcd(a, b)); },
+  divis(r, p) {
+    const by = p.by || r.pick([3, 9]); const right = by * r.int(Math.ceil(100 / by), Math.floor(999 / by)); const wrong = [];
+    while (wrong.length < 3) { const x = r.int(100, 999); if (x % by === 0 || wrong.indexOf(x) >= 0 || x === right) continue; if (by === 9 && wrong.length < 2 && x % 3 !== 0) continue; wrong.push(x); }
+    return { q: 'Which number is divisible by ' + by + '?', t: 'mc', opts: r.shuffle([right].concat(wrong).map(String)), a: String(right), v: null };
+  },
+  area(r) { let b, h; do { b = r.int(4, 20); h = r.int(4, 20); } while ((b * h) % 2); return num('A triangle has a base of ' + b + ' cm and a height of ' + h + ' cm. What is its area in square centimeters?', b * h / 2); },
+  divdec(r) { const d = r.pick([0.1, 0.01]); const A = r.int(2, 99); return num(A + ' \u00F7 ' + d + ' =', d === 0.1 ? A * 10 : A * 100); },
+  speed(r) { const v = r.int(20, 90), t = r.int(2, 6); const s = nm(r); return r.int(0, 1) ? num('A jeepney travels ' + v * t + ' km in ' + t + ' hours. What is its average speed in km/h?', v) : num('A bus travels at ' + v + ' km/h. How many hours does it need to travel ' + v * t + ' km?', t); },
+  surf(r) { if (r.int(0, 1)) { const s = r.int(2, 12); return num('What is the surface area of a cube with edges of ' + s + ' cm? (in cm\u00B2)', 6 * s * s); } const l = r.int(3, 12), w = r.int(2, 9), h = r.int(2, 9); return num('What is the surface area of a rectangular prism with length ' + l + ' cm, width ' + w + ' cm and height ' + h + ' cm? (in cm\u00B2)', 2 * (l * w + l * h + w * h)); },
+  explaw(r, p) {
+    const v = p.v || r.pick(['product', 'quotient', 'power']); const a = r.int(3, 9), b = r.int(2, 6);
+    if (v === 'product') return num('x^' + a + ' \u00B7 x^' + b + ' = x^n. What is n?', a + b);
+    if (v === 'quotient') return num('x^' + (a + b) + ' \u00F7 x^' + b + ' = x^n. What is n?', a);
+    return num('(x^' + b + ')^' + (a > 5 ? 3 : a) + ' = x^n. What is n?', b * (a > 5 ? 3 : a));
+  },
+  sqrt(r) { const s = r.int(4, 20); return num('\u221A' + s * s + ' =', s); },
+  evalexp(r, p) { const x = r.int(2, 6), a = r.int(2, 9), b = r.int(1, 20); return p.q ? num('Evaluate ' + a + 'x\u00B2 + ' + b + ' when x = ' + x + '.', a * x * x + b) : num('Evaluate ' + a + 'x + ' + b + ' when x = ' + x + '.', a * x + b); },
+  poly(r, p, i) {
+    if (p.mode === 'mul') { const a = r.int(1, 9), b = r.int(1, 9); return i % 2 === 0 ? num('(x + ' + a + ')(x + ' + b + ') = x\u00B2 + Px + Q. What is P?', a + b) : num('(x + ' + a + ')(x + ' + b + ') = x\u00B2 + Px + Q. What is Q?', a * b); }
+    const a = r.int(2, 9), b = r.int(1, 9), c = r.int(2, 9), d = r.int(1, 9);
+    return i % 2 === 0 ? num('(' + a + 'x + ' + b + ') + (' + c + 'x + ' + d + ') = Ex + F. What is E?', a + c) : num('(' + a + 'x + ' + (b + d) + ') \u2212 (' + c + 'x + ' + d + ') = Ex + F. What is F?', b);
+  },
+  lineq(r) { const x = r.int(-9, 9) || 4, a = r.int(2, 9), b = r.int(-15, 15) || 3; const c = a * x + b; return num('Solve for x: ' + a + 'x ' + (b < 0 ? MINUS + ' ' + (-b) : '+ ' + b) + ' = ' + c + '.', x); },
+  ineq(r) { const a = r.int(2, 6), b = r.int(1, 9), c = r.int(20, 60); const lim = (c - b) / a; return num('What is the largest whole number x that satisfies ' + a + 'x + ' + b + ' < ' + c + '?', Math.ceil(lim) - 1); },
+  factor(r) { const a = r.int(1, 8), b = r.int(a + 1, 9); return num('x\u00B2 + ' + (a + b) + 'x + ' + a * b + ' = (x + a)(x + b), and a is smaller than b. What is a?', a); },
   add(r, p) {
     const [a, b] = pickPair(r, p, (x, y) => (p.max ? x + y <= p.max : true) && (p.regroup === true ? hasCarry(x, y) : p.regroup === false ? !hasCarry(x, y) : true));
     return num(fmtInt(a) + ' + ' + fmtInt(b) + ' =', a + b);
@@ -256,8 +302,8 @@ const GEN = {
     const [a, b] = pickPair(r, p, (x, y) => x > y && (p.regroup === true ? hasBorrow(x, y) : p.regroup === false ? !hasBorrow(x, y) : true));
     return num(fmtInt(a) + ' ' + MINUS + ' ' + fmtInt(b) + ' =', a - b);
   },
-  mul(r, p) { const a = r.int(p.a[0], p.a[1]), b = r.int(p.b[0], p.b[1]); return num(fmtInt(a) + ' \u00D7 ' + fmtInt(b) + ' =', a * b); },
-  div(r, p) { const d = r.int(p.d[0], p.d[1]), qq = r.int(p.q[0], p.q[1]); return num(fmtInt(d * qq) + ' \u00F7 ' + d + ' =', qq); },
+  mul(r, p) { const a = p.aList ? r.pick(p.aList) : r.int(p.a[0], p.a[1]), b = p.bList ? r.pick(p.bList) : r.int(p.b[0], p.b[1]); return num(fmtInt(a) + ' \u00D7 ' + fmtInt(b) + ' =', a * b); },
+  div(r, p) { const d = p.dList ? r.pick(p.dList) : r.int(p.d[0], p.d[1]), qq = r.int(p.q[0], p.q[1]); return num(fmtInt(d * qq) + ' \u00F7 ' + d + ' =', qq); },
   'dec:add'(r, p) { const sc = Math.pow(10, p.dp); const A = r.int(150, 9000), B = r.int(150, 5000); return num((A / sc).toFixed(p.dp) + ' + ' + (B / sc).toFixed(p.dp) + ' =', ((A + B) / sc).toFixed(p.dp)); },
   'dec:sub'(r, p) { const sc = Math.pow(10, p.dp); let A = r.int(2000, 9900), B = r.int(150, 1900); return num((A / sc).toFixed(p.dp) + ' ' + MINUS + ' ' + (B / sc).toFixed(p.dp) + ' =', ((A - B) / sc).toFixed(p.dp)); },
   'dec:mul'(r, p) { const A = r.int(12, 99), w = r.int(p.w[0], p.w[1]); return num((A / 10).toFixed(1) + ' \u00D7 ' + w + ' =', ((A * w) / 10).toFixed(1)); },
@@ -278,7 +324,7 @@ const GEN = {
   'sdec:sub'(r) { const [A, B] = signedPair(r, 11, 99); return num(parD(A / 10, 1) + ' ' + MINUS + ' ' + parD(B / 10, 1) + ' =', ((A - B) / 10).toFixed(1)); },
   'sdec:mul'(r) { const [A, B] = signedPair(r, 12, 59); return num(parD(A / 10, 1) + ' \u00D7 ' + parD(B / 10, 1) + ' =', ((A * B) / 100).toFixed(2)); },
   'sdec:div'(r) { const [Qq, B] = signedPair(r, 2, 12); const bt = Math.abs(B) + 10; const bs = B < 0 ? -bt : bt; const A = Qq * bs; return num(parD(A / 10, 1) + ' \u00F7 ' + parD(bs / 10, 1) + ' =', Qq); },
-  expr(r, p, i, level) { return (level === 9 ? EXPR9 : EXPR10)[i](r); },
+  expr(r, p, i, level) { const arr = p.set === 'e5' ? EXPR5 : p.set === 'e6' ? EXPR6 : p.set === 'e9' ? EXPR9S : p.set === 'e10' ? EXPR10S : (level === 9 ? EXPR9 : EXPR10); return arr[i](r); },
   wp(r, p, i, level) { const L = WP[wpTier(level)]; return (i === 0 ? r.pick(L.one) : r.pick(L.two))(r); }
 };
 function signedPair(r, lo, hi) {
@@ -323,6 +369,8 @@ const EXPR9 = [
   r => { const a = r.int(2, 9), b = r.int(2, 9), c = r.int(10, 60); return E(a + ' \u00D7 (' + MINUS + b + ') + ' + c, -a * b + c); },
   r => { const c = r.int(2, 6), k = r.int(3, 12), a = r.int(1, c * k - 1), d = r.int(1, k - 1); return E('(' + a + ' + ' + (c * k - a) + ') \u00F7 ' + c + ' ' + MINUS + ' ' + d, k - d); }
 ];
+const EXPR5 = [EXPR9[0], EXPR9[2], EXPR9[1], EXPR9[4]];
+const EXPR6 = [EXPR9[5], EXPR9[6], EXPR9[3]];
 const EXPR10 = [
   r => { const a = r.int(2, 9), b = r.int(2, 9), c = r.int(2, 9); return E(a + '\u00B2 + ' + b + ' \u00D7 ' + c, a * a + b * c); },
   r => { const a = r.int(1, 6), b = r.int(1, 6), c = r.int(1, 20); return E('(' + a + ' + ' + b + ')\u00B2 ' + MINUS + ' ' + c, (a + b) * (a + b) - c); },
@@ -335,9 +383,11 @@ const EXPR10 = [
   r => { const s = r.int(4, 15), b = r.int(2, 9), c = r.int(2, 9); return E('\u221A' + s * s + ' + ' + b + ' \u00D7 ' + c, s + b * c); },
   r => { const b = r.int(2, 6), m = r.int(2, 5), c = r.int(1, 10); return E(b * m + '\u00B2 \u00F7 ' + b + ' ' + MINUS + ' ' + c, b * m * m - c); }
 ];
+const EXPR9S = [EXPR9[7], EXPR9[8]];
+const EXPR10S = [EXPR10[1], EXPR10[5]];
 
 /* ---------- Word problems ---------- */
-function wpTier(level) { return level === 2 ? 'T1' : level <= 4 ? 'T2' : level === 5 ? 'T3a' : level === 6 ? 'T3b' : level <= 8 ? 'T4' : 'T5'; }
+function wpTier(level) { return level === 2 ? 'T1' : level <= 5 ? 'T2' : level === 6 ? 'T3b' : level <= 8 ? 'T4' : 'T5'; }
 const nm = r => r.pick(NAMES);
 const WP = {
   T1: {
@@ -372,7 +422,7 @@ const WP = {
   },
   T3b: {
     one: [
-      r => { const d = r.pick([5, 6, 8, 10, 12]), a = r.int(1, Math.floor(d / 2) - 0 || 1), b = r.int(1, Math.max(1, Math.floor(d / 2) - 1)); const s = qadd(Q(a, d), Q(b, d)); return num(nm(r).n + ' ate ' + '{' + a + '/' + d + '}' + ' of a cake and ' + nm(r).n + ' ate ' + '{' + b + '/' + d + '}' + ' of the same cake. How much of the cake did they eat together?', qStr(s), { t: 'frac', v: qVal(s) }); },
+      r => { const d = r.pick([3, 4, 5, 6, 8]), k = r.int(2, 9) * d, s = nm(r); return num('A ribbon is ' + k + ' meters long. ' + s.n + ' uses {1/' + d + '} of it. How many meters of ribbon did ' + s.n + ' use?', k / d); },
       r => { const a = r.int(2, 5), b = r.int(2, 7), k = r.int(3, 9); return num('The ratio of boys to girls in a group is ' + a + ':' + b + '. If there are ' + a * k + ' boys, how many girls are there?', b * k); }
     ],
     two: [
@@ -405,19 +455,19 @@ const WP = {
 /* ================= BLUEPRINT (edit here to change test content) ================= */
 const BLUEPRINT = {
   1: [['count', 2, {}], ['seq', 2, {}], ['add', 3, { a: [1, 9], b: [1, 9], max: 10 }], ['add', 2, { a: [5, 12], b: [3, 9], max: 20 }], ['cmp', 2, {}], ['numword', 1, {}]],
-  2: [['add', 3, { a: [10, 60], b: [1, 9], regroup: true, max: 99 }], ['add', 2, { a: [10, 60], b: [10, 39], max: 99 }], ['sub', 3, { a: [20, 99], b: [1, 9], regroup: true }], ['sub', 2, { a: [30, 99], b: [10, 49] }], ['wp', 2, {}]],
-  3: [['add', 2, { a: [100, 700], b: [100, 299], regroup: true, max: 999 }], ['sub', 2, { a: [300, 999], b: [100, 299], regroup: true }], ['mul', 2, { a: [2, 9], b: [2, 9] }], ['mul', 1, { a: [11, 29], b: [2, 5] }], ['div', 2, { d: [2, 9], q: [2, 9] }], ['div', 1, { d: [2, 9], q: [11, 25] }], ['wp', 2, {}]],
-  4: [['add', 2, { a: [1000, 9000], b: [1000, 5000], regroup: true, max: 14999 }], ['sub', 2, { a: [2000, 9999], b: [1000, 5999], regroup: true }], ['mul', 1, { a: [12, 99], b: [2, 9] }], ['mul', 1, { a: [101, 999], b: [2, 9] }], ['mul', 1, { a: [11, 40], b: [11, 30] }], ['div', 2, { d: [2, 9], q: [21, 150] }], ['div', 1, { d: [11, 25], q: [11, 40] }], ['wp', 2, {}]],
-  5: [['dec:add', 2, { dp: 2 }], ['dec:sub', 2, { dp: 2 }], ['dec:mul', 2, { w: [2, 12] }], ['mul', 1, { a: [21, 99], b: [21, 60] }], ['dec:div', 2, { w: [2, 9] }], ['div', 1, { d: [12, 35], q: [12, 90] }], ['wp', 2, {}]],
-  6: [['frac:add', 2, {}], ['frac:sub', 2, {}], ['frac:mul', 3, {}], ['frac:div', 3, {}], ['wp', 2, {}]],
-  7: [['int:add', 2, {}], ['int:sub', 2, {}], ['int:mul', 3, {}], ['int:div', 3, {}], ['wp', 2, {}]],
-  8: [['sdec:add', 2, {}], ['sfrac:sub', 2, {}], ['sfrac:mul', 1, {}], ['sdec:mul', 2, {}], ['sfrac:div', 1, {}], ['sdec:div', 2, {}], ['wp', 2, {}]],
-  9: [['expr', 10, {}], ['wp', 2, {}]],
-  10: [['expr', 10, {}], ['wp', 2, {}]]
+  2: [['cmp', 1, { max: 999 }], ['order', 1, {}], ['numword', 1, { lo: 21, hi: 99 }], ['seqstep', 1, {}], ['add3', 1, {}], ['add', 1, { a: [10, 89], b: [1, 9], regroup: true, max: 99 }], ['add', 1, { a: [10, 60], b: [10, 39], regroup: true, max: 99 }], ['sub', 1, { a: [20, 99], b: [1, 9], regroup: true }], ['sub', 1, { a: [30, 99], b: [10, 49], regroup: false }], ['sub', 1, { a: [30, 99], b: [10, 49], regroup: true }], ['wp', 2, {}]],
+  3: [['place', 1, {}], ['pattern', 1, {}], ['add', 1, { a: [100, 700], b: [100, 299], regroup: true, max: 999 }], ['add', 1, { a: [10, 99], b: [100, 899], regroup: true, max: 999 }], ['sub', 1, { a: [300, 999], b: [100, 299], regroup: true }], ['sub', 1, { a: [100, 500], b: [10, 99], regroup: true }], ['mul', 2, { aList: [2, 3, 4, 5, 10], b: [2, 10] }], ['div', 2, { dList: [2, 3, 4, 5, 10], q: [2, 10] }], ['wp', 2, {}]],
+  4: [['round', 1, { to: 'hundred', lo: 1000, hi: 9999 }], ['fraccmp', 1, {}], ['add', 1, { a: [1000, 6999], b: [1000, 2999], regroup: true, max: 9999 }], ['sub', 1, { a: [2000, 9999], b: [1000, 5999], regroup: true }], ['mul', 1, { a: [101, 999], b: [2, 9] }], ['mul', 1, { a: [11, 99], b: [11, 99] }], ['mul', 1, { a: [12, 999], bList: [10, 20, 30, 50, 100, 200, 300] }], ['div', 1, { dList: [6, 7, 8, 9], q: [2, 9] }], ['divr', 2, { d: [3, 9], q: [10, 60] }], ['wp', 2, {}]],
+  5: [['place', 1, { digits: 5 }], ['round', 1, { to: 'thousand', lo: 10000, hi: 99999 }], ['mul', 1, { a: [101, 999], b: [11, 99] }], ['mul', 1, { a: [1001, 4999], b: [2, 9] }], ['mul', 1, { a: [12, 999], bList: [10, 100, 1000] }], ['div', 1, { d: [2, 9], q: [100, 900] }], ['div', 1, { d: [11, 25], q: [12, 99] }], ['divten', 1, { dList: [10, 100, 1000] }], ['expr', 2, { set: 'e5' }], ['wp', 2, {}]],
+  6: [['divis', 1, {}], ['expr', 1, { set: 'e6' }], ['gcf', 1, {}], ['lcm', 1, {}], ['frac:mul', 3, {}], ['frac:div', 2, {}], ['area', 1, {}], ['wp', 2, {}]],
+  7: [['frac:add', 1, {}], ['frac:sub', 1, {}], ['frac:mul', 1, {}], ['frac:div', 1, {}], ['dec:add', 1, { dp: 2 }], ['dec:sub', 1, { dp: 2 }], ['dec:mul', 1, { w: [2, 12] }], ['divdec', 1, {}], ['int:add', 1, {}], ['int:sub', 1, {}], ['wp', 2, {}]],
+  8: [['int:add', 1, {}], ['int:sub', 1, {}], ['int:mul', 1, {}], ['int:div', 1, {}], ['sfrac:add', 1, {}], ['sfrac:sub', 1, {}], ['sfrac:mul', 1, {}], ['dec:div', 1, { w: [2, 9] }], ['speed', 1, {}], ['surf', 1, {}], ['wp', 2, {}]],
+  9: [['expr', 2, { set: 'e9' }], ['frac:mul', 1, {}], ['explaw', 1, {}], ['sqrt', 1, {}], ['evalexp', 1, {}], ['poly', 2, { mode: 'add' }], ['lineq', 1, {}], ['factor', 1, {}], ['wp', 2, {}]],
+  10: [['expr', 2, { set: 'e10' }], ['explaw', 1, { v: 'power' }], ['sqrt', 1, {}], ['evalexp', 1, { q: true }], ['poly', 2, { mode: 'mul' }], ['lineq', 1, {}], ['ineq', 1, {}], ['factor', 1, {}], ['wp', 2, {}]]
 };
 const LEVEL_NOTE = {
-  1: 'Counting, number sense, addition facts', 2: 'Addition and subtraction, 2-digit', 3: 'Four operations, 3-digit and facts', 4: 'Four operations, multi-digit',
-  5: 'Decimals and multi-digit', 6: 'Fractions, ratio, percent', 7: 'Integers', 8: 'Rational numbers (signed decimals and fractions)', 9: 'Order of operations', 10: 'Exponents and roots in expressions'
+  1: 'Counting, number sense, addition facts', 2: 'Numbers to 999, addition and subtraction to 99', 3: 'Place value, patterns, +/− to 999, × and ÷ by 2, 3, 4, 5, 10', 4: 'Whole numbers: +, −, ×, ÷ with remainders, rounding',
+  5: 'Whole numbers: place value, long multiplication and division, order of operations', 6: 'GCF, LCM, divisibility, fractions (× and ÷), area', 7: 'Fractions, decimals, integers (add and subtract)', 8: 'Integers and signed fractions, speed, surface area', 9: 'Operations, exponents, square roots, polynomials, equations', 10: 'Exponent laws, polynomial products, inequalities, factoring'
 };
 
 function genNumeracy(learnerId, form, level) {
@@ -530,6 +580,8 @@ function micSuggest(target, heard) {
 }
 if (typeof module !== 'undefined') module.exports = { READING, READ_LEVELS, levelPassed, nextReadingLevel, finalReadingLevel, micSuggest, wordCount };
 
+const WS_TITLES = {"1": ["", "Counting Objects", "Drawing the Number of Objects", "Matching Numbers to Objects", "Counting Objects and Writing Numbers in Words", "Missing Numbers", "Ordinal Numbers", "Illustrating Addition", "Naming Shapes: Circle, Square, Rectangle, and Triangle", "Comparing Shapes", "Patterns", "Days of the Week", "Order of Months and Days", "The Calendar", "Reading a Calendar", "Finding the Sum (+1)", "Finding the Sum (+2, +3)", "Finding the Sum (+3, +4)", "Finding the Sum (+4, +5)", "Finding the Sum (+5, +6)", "Finding the Sum (+6, +7)", "Finding the Sum (+7, +8)", "Finding the Sum (+8, +9)", "Finding the Sum (mixed)", "Writing Numbers in Words", "Writing Words into Numbers", "Fractions: ½ and ¼", "Naming Fractions", "Shading Fractions", "Comparing Sets"], "2": ["", "Counting Objects", "Drawing the Number of Objects", "Matching Numbers to Objects", "Counting Objects and Writing Numbers in Words", "Writing Numbers in Words", "Writing Words into Numbers", "Comparing Numbers", "Arranging Numbers in Increasing Order", "Comparing Numbers and Arranging Numbers in Increasing Order", "Arranging Numbers in Decreasing Order", "Comparing Numbers and Arranging Numbers in Decreasing Order", "Missing Numbers", "Ordinal Numbers", "Fractions: ½ and ¼", "Naming Fractions", "Shading Fractions", "Illustrating Addition", "Addition of 1-Digit by 1-Digit", "Addition of 1-Digit by 1-Digit by 1-Digit", "Addition of 2-Digit by 1-Digit without Regrouping", "Addition of 2-Digit by 1-Digit with Regrouping", "Addition of 2-Digit Numbers without Regrouping", "Addition of 2-Digit Numbers with Regrouping", "Illustrating Subtraction", "Parts of the Subtraction", "Subtraction of 2-Digit by 1-Digit without Regrouping", "Subtraction of 2-Digit by 1-Digit with Regrouping", "Subtraction of 2-Digit Numbers without Regrouping", "Subtraction of 2-Digit Numbers with Regrouping", "Naming Shapes: Circle, Square, Rectangle, and Triangle", "Comparing Shapes", "Patterns", "Days of the Week", "Order of Months and Days", "The Calendar", "Reading a Calendar"], "3": ["", "Place Values", "Reading and Writing Numbers", "Writing Numbers in Expanded Form", "Comparing and Ordering Numbers", "Missing Terms in Patterns", "Missing Terms in Patterns", "Missing Terms in Patterns", "Comparing and Arranging Fractions", "Addition of 2-digit and 3-digit Numbers", "Addition of 3-digit Numbers", "Word Problems on Addition", "Subtraction of 2-digit and 3-digit Numbers", "Word Problems on Subtraction", "Understanding Multiplication", "Properties of Multiplication", "Multiplication by 2, 3, 4, 5, and 10", "Understanding Division", "Division by 2, 3, 4, 5, and 10", "Word Problems on Division", "Half Circles and Quarter Circles", "Naming Shapes: Circle, Square, Rectangle, and Triangle", "Geometric Patterns", "Geometric Patterns", "Geometric Visualization"], "4": ["", "Odd and Even Numbers", "Comparing Fractions", "Ordering Fractions Ascending Order", "Fractions Equal or Greater than One", "Reading and Writing Fractions", "Arranging Numbers in Decreasing Order", "Addition of 3- to 4-digit Whole Number without and with Regrouping", "Addition of 2- to 4-digit Whole Number without and with Regrouping and Solving Word Problem in Addition", "Subtraction of 3- to 4-digit Whole Number with and without Regrouping", "Solving Word Problem in Subtraction", "Multiplication of 2- to 3-digit Whole Number by 1-digit Number without or with Regrouping", "Multiplication of 2-digit Whole Number by 2- digit numbers with Regrouping", "Multiplication of 2- to 3-digit Whole Numbers by Multiples of 10 and 100", "Solving Word Problem in Multiplication", "Division of Numbers up to 100 by 6, 7, 8, and 9 (Multiplication Table of 6, 7, 8, and 9)", "Division Facts of Numbers up to 10", "Division of 2-digit Whole Number by 1-digit Whole Number without or with remainder", "Division of 2- to 3-digit Whole Number by 1-digit Whole Number with remainder", "Division of 2-digit Whole Number by 2-digit Whole Number without and with remainder", "Division of 2- to 3-digit Whole Number by 10 and 100", "Point, Line, Line Segment, and Ray", "Parallel, Intersecting, and Perpendicular Lines", "Congruent Line Segment I.", "Visualizing Numbers", "Visualizing Numbers", "Finding the Value and Place Value of a Digit", "Determining the Value of a Digit based on Place Value", "Determining the Value of a Digit based on Place Value and Vice Versa", "Writing Numbers in Words and Vice Versa", "Comparing Numbers Using Relation Symbols", "Rounding Off to a Specific Place Value", "Rounding Off to a Specific Place Value", "Ordering Numbers in Increasing or Decreasing Order", "Ordering Numbers in Increasing or Decreasing Order"], "5": ["", "Visualizing Numbers", "Visualizing Numbers", "Finding the Value and Place Value of a Digit", "Determining the Value of a Digit based on Place Value", "Determining the Value of a Digit based on Place Value and Vice Versa", "Writing Numbers in Words and Vice Versa", "Comparing Numbers Using Relation Symbols", "Rounding Off to a Specific Place Value", "Rounding Off to a Specific Place Value", "Ordering Numbers in Increasing or Decreasing Order", "Ordering Numbers in Increasing or Decreasing Order", "Multiplying Numbers up to Thousands", "Multiplying Numbers up to Thousands and Solving Word Problems Involving Multiplication", "Estimating Products and Solving Word Problems Involving Multiplication", "Estimating Products and Solving Word Problems Involving Multiplication", "Multiplying Mentally", "Multiplying Mentally", "Division", "Division", "Dividing Mentally by Tens, Hundreds, or Thousands", "Dividing Mentally by Tens, Hundreds, or Thousands", "Estimating Quotients", "Division of Whole Numbers", "Division of Whole Numbers", "Estimating Quotient", "Solving Multi-Step Problems Involving Division and Other Operations", "Solving Multi-Step Problems Involving Division and Other Operations", "Order of Operations", "Order of Operations", "Kinds of Angles", "Kinds of Angles", "Kinds of Angles"], "6": ["", "Divisibility Rules", "Divisibility Rules", "Divisibility Rules", "Divisibility Rules", "Order of Operations", "Order of Operations", "Order of Operations", "Order of Operations", "Greatest Common Factor (GCF)", "Least Common Multiple (LCM)", "GCF and LCM", "GCF and LCM", "GCF and LCM", "Multiplication of Fractions", "Multiplication of Fractions", "Multiplication of Whole Numbers, Fractions, and Mixed Numbers", "Multiplication of Fractions", "Multiplication of Fractions", "Division of Fractions", "Division of Fractions", "Division of Fractions", "Division of Fractions", "Division of Fractions", "Division of Fractions", "Polygons", "Polygons", "12- and 24-hour Clock System", "Reading Clocks and Converting to 24-Hour Time", "Reading Clocks and Converting to 24-Hour Time", "Area of a Triangle", "Area of Trapezoid and Area of Parallelogram", "Area of Trapezoid and Area of Parallelogram", "Temperature", "Temperature", "Temperature"], "7": ["", "Adding Similar Fractions", "Subtracting Similar Fractions", "Adding and Subtracting Mixed Numbers", "Adding and Subtracting Mixed Numbers", "Adding and Subtracting Similar Fractions", "Adding and Subtracting Dissimilar Fractions", "Adding and Subtracting Dissimilar Fractions", "Word Problems on Adding and Subtracting Fractions", "Multiplying Fractions", "Multiplying Mixed Numbers", "Multiplying Mixed Numbers", "Dividing Fractions", "Dividing Mixed Numbers", "Adding Decimals", "Adding Decimals", "Subtracting Decimals", "Subtracting Decimals", "Adding and Subtracting Decimals (Word Phrases)", "Multiplying Decimals", "Multiplying Decimals", "Dividing Decimals", "Dividing Whole Numbers by Decimals", "Division by 0.1, 0.01, and 0.001", "Division by 0.1, 0.01, and 0.001 (continued)", "Division by 10, 100, and 1,000", "Division by 10, 100, and 1,000", "Solid Figures", "Cubes", "Triangular Prisms", "Pyramids", "Cylinders", "Cones", "Spheres", "Differentiating Solid and Plane Figures", "Differentiating Speed, Distance, Time", "Calculating Speed, Distance, Time", "Calculating Speed, Distance, Time", "Area of Composite Figures", "Area of Composite Figures", "Area of Composite Figures", "Surface Area of a Rectangular Prism", "Surface Area of a Triangular Prism", "Surface Area of a Cube and a Square Pyramid", "Surface Area of a Cube and Square Pyramid", "Surface Area of a Cylinder", "Surface Area of a Cone and Other Solid Figures", "Surface Area of a Sphere and Other Solid Figures", "Listing Outcomes", "Listing Outcomes", "Listing Outcomes", "Listing Outcomes", "Adding Two Positive Integers; Adding Two Positive Similar Fractions", "Adding Two Negative Integers; Adding Two Negative Similar Fractions", "Adding a Positive and a Negative Integer; Adding a Positive and Negative Fraction", "Adding a Positive and a Negative Integer", "Subtracting Two Positive Integers", "Subtracting Two Negative Integers", "Subtracting a Positive Integer by a Negative Integer", "Subtracting a Negative Integer by a Positive Integer; Subtracting a Negative Fraction by a Positive Fraction", "Subtracting Integers", "Multiplying Two Positive Integers; Multiplying Two Positive Fractions", "Multiplying Two Negative Integers; Multiplying Two Negative Fractions", "Multiplying Two Integers with Different Signs; Multiplying Fractions with Different Signs", "Multiplying Integers", "Division of Two Positive Integers; Division of Two Negative Integers", "Division of Two Integers with Different Signs", "Dividing Integers"], "9": ["", "Adding Two Positive Integers; Adding Two Positive Similar Fractions", "Adding Two Negative Integers; Adding Two Negative Similar Fractions", "Adding a Positive and a Negative Integer; Adding a Positive and Negative Fraction", "Adding a Positive and a Negative Integer", "Subtracting Two Positive Integers", "Subtracting Two Negative Integers", "Subtracting a Positive Integer by a Negative Integer", "Subtracting a Negative Integer by a Positive Integer; Subtracting a Negative Fraction by a Positive Fraction", "Subtracting Integers", "Multiplying Two Positive Integers; Multiplying Two Positive Fractions", "Multiplying Two Negative Integers; Multiplying Two Negative Fractions", "Multiplying Two Integers with Different Signs; Multiplying Fractions with Different Signs", "Multiplying Integers", "Division of Two Positive Integers; Division of Two Negative Integers", "Division of Two Integers with Different Signs", "Dividing Integers", "Performing Series of Operations Involving Fractions and Integers", "Multiplying Decimals and Fractions", "Dividing Decimals and Fractions", "Performing Operations Involving Three Fractions and Decimals", "Performing Operations Involving Three Fractions and Decimals", "Performing Operations Involving Three Fractions and Decimals", "Performing Operations Involving Four Fractions and Decimals", "Performing Operations Involving Four Fractions and Decimals", "Order of Operations", "Evaluating Exponents & Expressing Numbers in Exponential Notation with a Given Base", "Laws of Exponents", "Evaluating Expressions Using the Laws of Exponents", "Product Law and Quotient Law", "Power of Powers Law and Power of Different Bases Law", "Powers of Different Bases Law and Other Laws of Exponents", "Laws of Exponents", "Square Roots", "Translating Expressions into Symbols and Vice Versa", "Evaluating Algebraic Expressions", "Adding Polynomials", "Special Cases on Adding Polynomials", "Subtracting Polynomials", "Polynomial Operations and Functions", "Multiplying Polynomials", "Multiplying Polynomials", "Multiplying Polynomials", "Dividing Polynomials", "Multiplication and Division of Polynomials", "Multiplication and Division of Polynomials", "Linear Equations", "Inequalities", "Solving Inequalities", "Graphing and Solving Inequalities", "Factoring by GCF", "Factoring the Trinomial", "Factoring by Grouping, Word Problems with Factoring", "Factoring the Difference of Two Cubes", "Factoring the Difference of Two Cubes", "Factoring the Sum and Difference of Two Cubes", "Factoring using Various Methods", "Factoring using various methods, Word Problems on Factoring"]};
+
 /* ================= CONFIG ================= */
 const CONFIG = {
   VERSION: '1.0',
@@ -550,6 +602,7 @@ const CONFIG = {
     { code: 'SJF', name: 'San Jose-Santa Fe', url: 'https://script.google.com/macros/s/AKfycbwyQOt661M5GidmECS_xpJ3XYHGUOfb7enyUJ5Y12NnovViKzn3vH9E1EP0fJ1RtGSo/exec' },
     { code: 'DEMO', name: 'Practice mode (works without internet)', url: '' }
   ],
+  ENGAGEMENT_URL: 'https://tinyurl.com/2026aralexternaltutorsv1', // ARAL Tutor Engagement App (DTR and accomplishment)
   POST_FROM: '2026-12-01' // on or after this date the app opens on Posttest by default
 };
 
@@ -1082,7 +1135,12 @@ function finishReading(R) {
 }
 
 /* ================= TODAY (SESSION LOG) ================= */
-function lastEntry(lid, dom) { const e = D().tracker.filter(t => t.learner_id === lid && t.domain === dom && !Number(t.absent)).sort((a, b) => (a.date + a.created_at < b.date + b.created_at ? -1 : 1)); return e[e.length - 1]; }
+/* Grades 7 and 8 share one worksheet set, and so do Grades 9 and 10 */
+const canonSet = g => (g === 8 ? 7 : g === 10 ? 9 : g);
+const setLabel = n => (n === 7 ? 'G7-8' : n === 9 ? 'G9-10' : 'G' + n);
+const entrySet = t => { const m = /set:G(\d+)/.exec(t.note || ''); return m ? canonSet(Number(m[1])) : null; };
+const wsLabel = t => (t.domain === 'math' ? setLabel(entrySet(t) || 1) + ' WS ' : 'WS ') + t.worksheet;
+function lastEntry(lid, dom, set) { const e = D().tracker.filter(t => t.learner_id === lid && t.domain === dom && !Number(t.absent) && (set == null || (entrySet(t) || 1) === set)).sort((a, b) => (a.date + a.created_at < b.date + b.created_at ? -1 : 1)); return e[e.length - 1]; }
 function scrSession() {
   const date = S.date || todayISO(); const box = h('div', { class: 'stack' });
   const dateIn = h('input', { type: 'date', value: date, onchange: e => { S.date = e.target.value || todayISO(); render(); } });
@@ -1096,18 +1154,27 @@ function scrSession() {
     const stars = mine.filter(t => !Number(t.absent) && !Number(t.tri) && !Number(t.circ)).length; const le = lastEntry(l.id, S.sdom);
     const open = S.openRow === l.id;
     box.append(h('div', { class: 'srow' + (open ? ' open' : '') },
-      h('button', { class: 'shead', onclick: () => { S.openRow = open ? null : l.id; render(); } }, h('span', { class: 'av ' + (l.group === 'pullout' ? 'pull' : '') }, initials(l.name)), h('span', { class: 'rn' }, h('strong', {}, l.name), h('small', {}, le ? 'Last: worksheet ' + le.worksheet + (Number(le.tri) || Number(le.circ) ? ' (needs redo)' : ' ★') : 'No entries yet')),
+      h('button', { class: 'shead', onclick: () => { S.openRow = open ? null : l.id; render(); } }, h('span', { class: 'av ' + (l.group === 'pullout' ? 'pull' : '') }, initials(l.name)), h('span', { class: 'rn' }, h('strong', {}, l.name), h('small', {}, le ? 'Last: ' + wsLabel(le) + (Number(le.tri) || Number(le.circ) ? ' (needs redo)' : ' ★') : 'No entries yet')),
         h('span', { class: 'chips' }, absent ? h('i', { class: 'chip bad' }, 'Absent') : mine.length ? h('i', { class: 'chip ok' }, stars + '★ ' + (mine.length - stars) + ' redo') : null)),
       open ? sessionPanel(l, date) : null));
   });
   return box;
 }
 function sessionPanel(l, date) {
-  const dom = S.sdom; const le = lastEntry(l.id, dom); let ws = le ? (Number(le.tri) || Number(le.circ) ? Number(le.worksheet) : Number(le.worksheet) + 1) : 1; let tri = 0, circ = 0, ret = 0;
-  const val = (get, set, min, max, label, glyph) => { const s = h('strong', {}, String(get())); return h('div', { class: 'stepper' }, h('span', {}, label), h('button', { class: 'btn', 'aria-label': 'Less ' + label, onclick: () => { set(Math.max(min, get() - 1)); s.textContent = get(); upd(); } }, '−'), s, h('button', { class: 'btn', 'aria-label': 'More ' + label, onclick: () => { set(Math.min(max, get() + 1)); s.textContent = get(); upd(); } }, '+')); };
+  const dom = S.sdom; const math = dom === 'math'; const lastAny = lastEntry(l.id, dom);
+  let setG = math ? ((lastAny && entrySet(lastAny)) || canonSet(Math.min(Number(l.grade) || 1, 10))) : 0;
+  const maxWs = () => (math && WS_TITLES[setG] ? WS_TITLES[setG].length - 1 : 999);
+  const nextWs = () => { const le = lastEntry(l.id, dom, math ? setG : null); return le ? (Number(le.tri) || Number(le.circ) ? Number(le.worksheet) : Number(le.worksheet) + 1) : 1; };
+  let ws = Math.min(nextWs(), maxWs()); let tri = 0, circ = 0, ret = 0;
+  const val = (get, set, min, max, label) => { const s2 = h('strong', {}, String(get())); return h('div', { class: 'stepper' }, h('span', {}, label), h('button', { class: 'btn', 'aria-label': 'Less ' + label, onclick: () => { set(Math.max(min, get() - 1)); s2.textContent = get(); upd(); } }, '−'), s2, h('button', { class: 'btn', 'aria-label': 'More ' + label, onclick: () => { set(Math.min(max, get() + 1)); s2.textContent = get(); upd(); } }, '+')); };
   const status = h('div', { class: 'stat' }); const upd = () => { status.className = 'stat ' + (tri || circ ? 'redo' : 'perfect'); status.textContent = tri || circ ? 'Needs redo: ' + tri + ' △  ' + circ + ' ○' : '★ Perfect, all items correct'; }; upd();
-  const mk = absent => addOp('tracker', { entry_id: uid(), learner_id: l.id, tutor_id: P.session.tutor_id, date, domain: dom, worksheet: absent ? '' : ws, tri: absent ? 0 : tri, circ: absent ? 0 : circ, retries: absent ? 0 : ret, absent: absent ? 1 : 0, note: '', created_at: new Date().toISOString() });
-  return h('div', { class: 'spanel' }, val(() => ws, v => { ws = v; }, 1, 999, 'Worksheet no.'), val(() => tri, v => { tri = v; }, 0, 99, '△ partly correct'), val(() => circ, v => { circ = v; }, 0, 99, '○ wrong'), val(() => ret, v => { ret = v; }, 0, 20, 'Redo rounds'), status,
+  const wsNum = h('strong', {}, String(ws)); const wsTitle = h('div', { class: 'wstitle' });
+  const showWs = () => { wsNum.textContent = ws; const t = math && WS_TITLES[setG] ? WS_TITLES[setG][ws] : ''; wsTitle.textContent = t || ''; wsTitle.hidden = !t; };
+  const wsRow = h('div', { class: 'stepper' }, h('span', {}, 'Worksheet no.'), h('button', { class: 'btn', 'aria-label': 'Previous worksheet', onclick: () => { ws = Math.max(1, ws - 1); showWs(); } }, '−'), wsNum, h('button', { class: 'btn', 'aria-label': 'Next worksheet', onclick: () => { ws = Math.min(maxWs(), ws + 1); showWs(); } }, '+'));
+  showWs();
+  const setSel = math ? h('label', { class: 'fld' }, h('span', {}, 'Worksheet set (ARAL Math)'), h('select', { id: 'wsSet', onchange: e => { setG = Number(e.target.value); ws = Math.min(nextWs(), maxWs()); showWs(); } }, [1, 2, 3, 4, 5, 6, 7, 9].map(g => h('option', { value: g, selected: g === setG }, g === 7 ? 'Grades 7 and 8' : g === 9 ? 'Grades 9 and 10' : 'Grade ' + g)))) : null;
+  const mk = absent => addOp('tracker', { entry_id: uid(), learner_id: l.id, tutor_id: P.session.tutor_id, date, domain: dom, worksheet: absent ? '' : ws, tri: absent ? 0 : tri, circ: absent ? 0 : circ, retries: absent ? 0 : ret, absent: absent ? 1 : 0, note: math ? 'set:G' + setG : '', created_at: new Date().toISOString() });
+  return h('div', { class: 'spanel' }, setSel, wsRow, wsTitle, val(() => tri, v => { tri = v; }, 0, 99, '△ partly correct'), val(() => circ, v => { circ = v; }, 0, 99, '○ wrong'), val(() => ret, v => { ret = v; }, 0, 20, 'Redo rounds'), status,
     h('div', { class: 'two' }, h('button', { class: 'btn', onclick: () => { mk(true); S.openRow = null; render(); toast(l.name + ' marked absent'); } }, 'Absent'), h('button', { class: 'btn primary', onclick: () => { mk(false); S.openRow = null; render(); toast('Saved worksheet ' + ws); } }, 'Save worksheet')));
 }
 
@@ -1117,8 +1184,9 @@ function metrics() {
     const R = resultsFor(l.id); const n = R.numeracy || {}; const rd = R.reading_en && R.reading_en.pre ? 'reading_en' : R.reading_fil && R.reading_fil.pre ? 'reading_fil' : (R.reading_en ? 'reading_en' : R.reading_fil ? 'reading_fil' : null);
     const r = rd ? R[rd] : {}; const tr = D().tracker.filter(t => t.learner_id === l.id);
     const mx = d => Math.max(0, ...tr.filter(t => t.domain === d && !Number(t.absent) && t.worksheet !== '').map(t => Number(t.worksheet)));
+    const mxMath = (() => { let best = 0; tr.forEach(t => { if (t.domain === 'math' && !Number(t.absent) && t.worksheet !== '') best = Math.max(best, (entrySet(t) || 1) * 1000 + Number(t.worksheet)); }); return best ? setLabel(Math.floor(best / 1000)) + '-' + (best % 1000) : ''; })();
     const days = new Set(tr.filter(t => !Number(t.absent)).map(t => t.date)).size; const abs = new Set(tr.filter(t => Number(t.absent)).map(t => t.date)).size;
-    return { l, nPre: n.pre ? n.pre.pct : null, nPost: n.post ? n.post.pct : null, rLang: rd, rPre: r.pre ? r.pre.reading_level : null, rPost: r.post ? r.post.reading_level : null, wsMath: mx('math'), wsRead: mx('reading'), days, abs };
+    return { l, nPre: n.pre ? n.pre.pct : null, nPost: n.post ? n.post.pct : null, rLang: rd, rPre: r.pre ? r.pre.reading_level : null, rPost: r.post ? r.post.reading_level : null, wsMath: mxMath, wsRead: mx('reading'), days, abs };
   });
   return rows;
 }
@@ -1163,6 +1231,7 @@ function scrAccount() {
     h('div', { class: 'kv' }, h('span', {}, 'Name'), h('strong', {}, P.session.name), h('span', {}, 'Tutor code'), h('strong', {}, P.session.tutor_id), h('span', {}, 'District'), h('strong', {}, dist ? dist.name : ''), h('span', {}, 'Waiting to send'), h('strong', {}, String(d.queue.length)), h('span', {}, 'Last refreshed from server'), h('strong', {}, d.pulledAt ? new Date(d.pulledAt).toLocaleString() : 'Never')),
     h('button', { class: 'btn primary wide', onclick: async e => { e.currentTarget.disabled = true; const ok = await sync(true); render(); toast(ok ? 'Everything is up to date' : 'No signal. Your work is safe on this phone.'); } }, 'Send and refresh now'),
     h('div', { class: 'two' }, h('button', { class: 'btn', onclick: () => { S.phase = 'pre'; S.tab = 'learners'; render(); } }, 'Open Pretest'), h('button', { class: 'btn', onclick: () => { S.phase = 'post'; S.tab = 'learners'; render(); } }, 'Open Posttest')),
+    h('a', { class: 'btn wide', id: 'linkEngage', href: CONFIG.ENGAGEMENT_URL, target: '_blank', rel: 'noopener' }, 'Open DTR and Accomplishment (ARAL Tutor Engagement)'),
     h('button', { class: 'btn wide', onclick: () => sheetHelp() }, 'How to use this app'),
     h('button', { class: 'btn danger wide', onclick: () => logout(false) }, 'Sign out'),
     h('p', { class: 'hint' }, 'Version ' + CONFIG.VERSION + '. Your work is saved on this phone first and sent when there is signal. Learner names are only in your district sheet; Division reports use learner codes.'));
@@ -1196,6 +1265,8 @@ function sheetHelp(open) {
       h('p', {}, 'Do the Pretest at the start and the Posttest at the end of the program. The app opens on Posttest from December 1. You can switch at the top of Learners.'),
       h('p', {}, h('strong', {}, 'Numeracy: '), 'Tap a learner, then Numeracy. Choose a lower level for a learner who is behind. The learner answers on the phone, or you type answers from paper. A ○ in the result means review that item. Correct answers are not shown so the posttest stays fair.'),
       h('p', {}, h('strong', {}, 'Reading: '), 'The learner reads aloud. Tap ✔ Correct or ✘ Not yet. If the learner passes a level the test goes up, if not it goes down, to find the highest level passed (0 to 5). The microphone button is optional and only a suggestion; your ✔ or ✘ counts.')),
+    sec('dtr', 'DTR and accomplishment',
+      h('p', {}, 'Your DTR and accomplishment report are in the ARAL Tutor Engagement app. Open it from Account, then Open DTR and Accomplishment. It has its own sign-in (reference number and PIN).')),
     sec('offline', 'No signal?',
       h('p', {}, 'Everything is saved on your phone first. The top right says “n waiting to send” until there is signal, then it sends by itself. You can also open Account and tap Send and refresh now.')),
     sec('pin', 'Your tutor code and PIN',
