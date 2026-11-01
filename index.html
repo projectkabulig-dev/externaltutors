@@ -147,6 +147,7 @@ table.mini{width:100%;border-collapse:collapse;font-size:14px}.mini th,.mini td{
 .rtile .ans{display:block;font-family:var(--body);font-size:14px;color:var(--ink2);margin-top:4px}
 .passage.small{font-size:17px;line-height:1.55;padding:12px}
 .glist{display:flex;flex-direction:column;gap:8px;max-height:46vh;overflow:auto}.grow{display:grid;grid-template-columns:1fr minmax(150px,200px);gap:6px 10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#fff}.grow.perfect{border-color:var(--sun);background:var(--sun-l)}.grow.redo{border-color:var(--coral);background:var(--coral-l)}.grow.absent{background:#EEF1F6}.gnums{grid-column:1/-1;display:flex;gap:10px}.gnum{display:flex;align-items:center;gap:6px;font-weight:700}.gnum input{width:72px;min-height:40px}
+.startbox{border-left:4px solid var(--sea);background:var(--sea-l);border-radius:10px;padding:10px 14px;margin:8px 0}.startbox ol{margin:6px 0 0 18px;padding:0}.startbox li{margin:3px 0}
 .stat{padding:10px 12px;border-radius:10px;font-weight:700;text-align:center}.stat.perfect{background:var(--sun-l);color:#7A5600}.stat.redo{background:var(--coral-l);color:var(--coral)}
 
 /* report */
@@ -244,9 +245,9 @@ const num = (q, a, extra) => Object.assign({ q, a: String(a), v: Number(a), t: '
 /* ================= ITEM GENERATORS ================= */
 const GEN = {
   count(r) { const n = r.int(3, 15); const e = r.pick(['🍎', '🐟', '⭐', '🥭', '🐢', '🌺', '🐓', '🛶']); return num('How many are there?', n, { big: Array(n).fill(e).join(' ') }); },
-  seq(r, p, i) {
-    if (i % 2 === 0) { if (r.int(0, 1)) { const n = r.int(3, 48); return num('What number comes after ' + n + '?', n + 1); } const n = r.int(4, 49); return num('What number comes before ' + n + '?', n - 1); }
-    if (r.int(0, 1)) { const s = r.int(2, 40); return num(s + ', ' + (s + 1) + ', ___, ' + (s + 3), s + 2); }
+  seq(r, p, i, level, rv) {
+    if (i % 2 === 0) { if (rv.int(0, 1)) { const n = r.int(3, 48); return num('What number comes after ' + n + '?', n + 1); } const n = r.int(4, 49); return num('What number comes before ' + n + '?', n - 1); }
+    if (rv.int(0, 1)) { const s = r.int(2, 40); return num(s + ', ' + (s + 1) + ', ___, ' + (s + 3), s + 2); }
     const s = 2 * r.int(1, 20); return num(s + ', ' + (s + 2) + ', ___, ' + (s + 6), s + 4);
   },
   cmp(r, p, i) {
@@ -279,17 +280,17 @@ const GEN = {
   divten(r, p) { const d = r.pick(p.dList || [10, 100]); const qq = r.int(2, 99); return num(fmtInt(qq * d) + ' \u00F7 ' + d + ' =', qq); },
   gcf(r) { let gg, m, n; do { gg = r.int(2, 9); m = r.int(2, 9); n = r.int(2, 9); } while (gcd(m, n) !== 1 || m === n); return num('What is the greatest common factor (GCF) of ' + gg * m + ' and ' + gg * n + '?', gg); },
   lcm(r) { let a, b; do { a = r.int(2, 12); b = r.int(2, 12); } while (a === b || a * b / gcd(a, b) > 90); return num('What is the least common multiple (LCM) of ' + a + ' and ' + b + '?', a * b / gcd(a, b)); },
-  divis(r, p) {
-    const by = p.by || r.pick([3, 9]); const right = by * r.int(Math.ceil(100 / by), Math.floor(999 / by)); const wrong = [];
+  divis(r, p, i, level, rv) {
+    const by = p.by || rv.pick([3, 9]); const right = by * r.int(Math.ceil(100 / by), Math.floor(999 / by)); const wrong = [];
     while (wrong.length < 3) { const x = r.int(100, 999); if (x % by === 0 || wrong.indexOf(x) >= 0 || x === right) continue; if (by === 9 && wrong.length < 2 && x % 3 !== 0) continue; wrong.push(x); }
     return { q: 'Which number is divisible by ' + by + '?', t: 'mc', opts: r.shuffle([right].concat(wrong).map(String)), a: String(right), v: null };
   },
   area(r) { let b, h; do { b = r.int(4, 20); h = r.int(4, 20); } while ((b * h) % 2); return num('A triangle has a base of ' + b + ' cm and a height of ' + h + ' cm. What is its area in square centimeters?', b * h / 2); },
-  divdec(r) { const d = r.pick([0.1, 0.01]); const A = r.int(2, 99); return num(A + ' \u00F7 ' + d + ' =', d === 0.1 ? A * 10 : A * 100); },
-  speed(r) { const v = r.int(20, 90), t = r.int(2, 6); const s = nm(r); return r.int(0, 1) ? num('A jeepney travels ' + v * t + ' km in ' + t + ' hours. What is its average speed in km/h?', v) : num('A bus travels at ' + v + ' km/h. How many hours does it need to travel ' + v * t + ' km?', t); },
-  surf(r) { if (r.int(0, 1)) { const s = r.int(2, 12); return num('What is the surface area of a cube with edges of ' + s + ' cm? (in cm\u00B2)', 6 * s * s); } const l = r.int(3, 12), w = r.int(2, 9), h = r.int(2, 9); return num('What is the surface area of a rectangular prism with length ' + l + ' cm, width ' + w + ' cm and height ' + h + ' cm? (in cm\u00B2)', 2 * (l * w + l * h + w * h)); },
-  explaw(r, p) {
-    const v = p.v || r.pick(['product', 'quotient', 'power']); const a = r.int(3, 9), b = r.int(2, 6);
+  divdec(r, p, i, level, rv) { const d = rv.pick([0.1, 0.01]); const A = r.int(2, 99); return num(A + ' \u00F7 ' + d + ' =', d === 0.1 ? A * 10 : A * 100); },
+  speed(r, p, i, level, rv) { const v = r.int(20, 90), t = r.int(2, 6); return rv.int(0, 1) ? num('A jeepney travels ' + v * t + ' km in ' + t + ' hours. What is its average speed in km/h?', v) : num('A bus travels at ' + v + ' km/h. How many hours does it need to travel ' + v * t + ' km?', t); },
+  surf(r, p, i, level, rv) { if (rv.int(0, 1)) { const s = r.int(2, 12); return num('What is the surface area of a cube with edges of ' + s + ' cm? (in cm\u00B2)', 6 * s * s); } const l = r.int(3, 12), w = r.int(2, 9), h = r.int(2, 9); return num('What is the surface area of a rectangular prism with length ' + l + ' cm, width ' + w + ' cm and height ' + h + ' cm? (in cm\u00B2)', 2 * (l * w + l * h + w * h)); },
+  explaw(r, p, i, level, rv) {
+    const v = p.v || rv.pick(['product', 'quotient', 'power']); const a = r.int(3, 9), b = r.int(2, 6);
     if (v === 'product') return num('x^' + a + ' \u00B7 x^' + b + ' = x^n. What is n?', a + b);
     if (v === 'quotient') return num('x^' + (a + b) + ' \u00F7 x^' + b + ' = x^n. What is n?', a);
     return num('(x^' + b + ')^' + (a > 5 ? 3 : a) + ' = x^n. What is n?', b * (a > 5 ? 3 : a));
@@ -335,7 +336,7 @@ const GEN = {
   'sdec:mul'(r) { const [A, B] = signedPair(r, 12, 59); return num(parD(A / 10, 1) + ' \u00D7 ' + parD(B / 10, 1) + ' =', ((A * B) / 100).toFixed(2)); },
   'sdec:div'(r) { const [Qq, B] = signedPair(r, 2, 12); const bt = Math.abs(B) + 10; const bs = B < 0 ? -bt : bt; const A = Qq * bs; return num(parD(A / 10, 1) + ' \u00F7 ' + parD(bs / 10, 1) + ' =', Qq); },
   expr(r, p, i, level) { const arr = p.set === 'e5' ? EXPR5 : p.set === 'e6' ? EXPR6 : p.set === 'e9' ? EXPR9S : p.set === 'e10' ? EXPR10S : (level === 9 ? EXPR9 : EXPR10); return arr[i](r); },
-  wp(r, p, i, level) { const L = WP[wpTier(level)]; return (i === 0 ? r.pick(L.one) : r.pick(L.two))(r); }
+  wp(r, p, i, level, rv) { const L = WP[wpTier(level)]; const arr = i === 0 ? L.one : L.two; return arr[rv.int(0, arr.length - 1)](r); }
 };
 function signedPair(r, lo, hi) {
   for (let k = 0; k < 100; k++) { const a = r.sign() * r.int(lo, hi), b = r.sign() * r.int(lo, hi); if (a < 0 || b < 0) return [a, b]; }
@@ -433,11 +434,11 @@ const WP = {
   T3b: {
     one: [
       r => { const d = r.pick([3, 4, 5, 6, 8]), k = r.int(2, 9) * d, s = nm(r); return num('A ribbon is ' + k + ' meters long. ' + s.n + ' uses {1/' + d + '} of it. How many meters of ribbon did ' + s.n + ' use?', k / d); },
-      r => { const a = r.int(2, 5), b = r.int(2, 7), k = r.int(3, 9); return num('The ratio of boys to girls in a group is ' + a + ':' + b + '. If there are ' + a * k + ' boys, how many girls are there?', b * k); }
+      r => { const d = r.pick([2, 3, 4, 5]), k = r.int(2, 9), s = nm(r); return num('A ribbon is ' + k + ' meters long. ' + s.n + ' cuts it into pieces of {1/' + d + '} meter each. How many pieces does ' + s.n + ' get?', k * d); }
     ],
     two: [
       r => { const k = r.pick([3, 4, 5, 6]), m = r.int(4, 12), s = nm(r); return num(s.n + ' has ' + k * m + ' stickers. ' + s.p + ' gives {1/' + k + '} of them to a friend. How many stickers does ' + s.n + ' have left?', k * m - m); },
-      r => { const N = r.pick([200, 300, 400, 500, 600]), pct = r.pick([20, 25, 40, 50, 60]); return num('A school has ' + N + ' pupils. ' + pct + '% of them are girls. How many boys are there?', N - (N * pct) / 100); }
+      r => { const k = 3 * r.int(3, 15); return num('A rope is ' + k + ' meters long. {1/3} of it is used for a fence. Then {1/2} of the remaining rope is used for a clothesline. How many meters of rope are left?', k / 3); }
     ]
   },
   T4: {
@@ -452,12 +453,13 @@ const WP = {
   },
   T5: {
     one: [
-      r => { const N = r.pick([200, 300, 400, 500, 800]), pct = r.pick([10, 20, 25, 40, 50]); return num(pct + '% of ' + N + ' is how much?', (N * pct) / 100); },
-      r => { const v = r.int(30, 80), t = r.int(2, 6); return num('A jeepney travels at ' + v + ' km/h for ' + t + ' hours. How many kilometers does it travel?', v * t); }
+      r => { const a = r.int(5, 30), x = r.int(6, 40); return num('A number increased by ' + a + ' is ' + (x + a) + '. What is the number?', x); },
+      r => { const m = r.pick([3, 4, 5, 6, 7]), x = r.int(4, 15); return num(m + ' times a number is ' + m * x + '. What is the number?', x); }
     ],
     two: [
-      r => { const p = r.pick([200, 300, 400, 500, 800, 1000]), d = r.pick([10, 20, 25, 30, 40, 50]); return num('A shirt costs \u20B1' + p + '. It is on sale at ' + d + '% off. What is the sale price in pesos?', p - (p * d) / 100); },
-      r => { const v = r.int(20, 50), t = r.int(2, 4), v2 = r.int(30, 60), t2 = r.int(2, 4); return num('A banca travels ' + v + ' km/h for ' + t + ' hours, then ' + v2 + ' km/h for ' + t2 + ' hours. How many kilometers does it travel in all?', v * t + v2 * t2); }
+      r => { const m = r.pick([2, 3, 4, 5]), b = r.int(3, 15), x = r.int(3, 15); return num(m + ' times a number, increased by ' + b + ', is ' + (m * x + b) + '. What is the number?', x); },
+      r => { const a = r.pick([20, 30, 40, 50]), b = r.pick([8, 10, 12, 15]), k = r.int(3, 12); return num('A taxi charges \u20B1' + a + ' plus \u20B1' + b + ' for every kilometer. Joy paid \u20B1' + (a + b * k) + '. How many kilometers did she ride?', k); },
+      r => { const w = r.int(5, 20), k = r.int(2, 9); return num('The perimeter of a rectangle is ' + (4 * w + 2 * k) + ' cm. Its length is ' + k + ' cm more than its width. What is its width in cm?', w); }
     ]
   }
 };
@@ -480,13 +482,15 @@ const LEVEL_NOTE = {
   5: 'Whole numbers: place value, long multiplication and division, order of operations', 6: 'GCF, LCM, divisibility, fractions (× and ÷), area', 7: 'Fractions, decimals, integers (add and subtract)', 8: 'Integers and signed fractions, speed, surface area', 9: 'Operations, exponents, square roots, polynomials, equations', 10: 'Exponent laws, polynomial products, inequalities, factoring'
 };
 
-function genNumeracy(learnerId, form, level) {
+const itemSig = it => it.q + '|' + (it.big || '') + '|' + (it.opts || []).join(',');
+function genNumeracy(learnerId, form, level, _avoid) {
+  const avoid = _avoid || (form === 'B' ? genNumeracy(learnerId, 'A', level, []) : []); // the posttest never repeats a pretest item
   const r = mkR(hashStr(learnerId + '|N|' + form + '|' + level));
   const items = []; const seen = new Set();
   BLUEPRINT[level].forEach(([type, n, p]) => {
     for (let i = 0; i < n; i++) {
       let it, tries = 0;
-      do { it = GEN[type](r, p || {}, i, level); tries++; } while (seen.has(it.q + (it.big || '')) && tries < 40);
+      const rv = mkR(hashStr(learnerId + '|V|' + level + '|' + items.length)); do { it = GEN[type](r, p || {}, i, level, rv); tries++; } while ((seen.has(it.q + (it.big || '')) || (avoid[items.length] && itemSig(avoid[items.length]) === itemSig(it))) && tries < 40);
       seen.add(it.q + (it.big || '')); it.skill = type.split(':')[0]; items.push(it);
     }
   });
@@ -665,6 +669,34 @@ function scorePassage(words, miscues, secs, correct) {
 if (typeof module !== 'undefined') module.exports = { PLUS, PLUS3, scorePassage, KS1, KS1_TASKS, KS1_TOTAL, passNeed, scoreReading, micSuggest, wordCount };
 
 const WS_TITLES = {"1": ["", "Counting Objects", "Drawing the Number of Objects", "Matching Numbers to Objects", "Counting Objects and Writing Numbers in Words", "Missing Numbers", "Ordinal Numbers", "Illustrating Addition", "Naming Shapes: Circle, Square, Rectangle, and Triangle", "Comparing Shapes", "Patterns", "Days of the Week", "Order of Months and Days", "The Calendar", "Reading a Calendar", "Finding the Sum (+1)", "Finding the Sum (+2, +3)", "Finding the Sum (+3, +4)", "Finding the Sum (+4, +5)", "Finding the Sum (+5, +6)", "Finding the Sum (+6, +7)", "Finding the Sum (+7, +8)", "Finding the Sum (+8, +9)", "Finding the Sum (mixed)", "Writing Numbers in Words", "Writing Words into Numbers", "Fractions: ½ and ¼", "Naming Fractions", "Shading Fractions", "Comparing Sets"], "2": ["", "Counting Objects", "Drawing the Number of Objects", "Matching Numbers to Objects", "Counting Objects and Writing Numbers in Words", "Writing Numbers in Words", "Writing Words into Numbers", "Comparing Numbers", "Arranging Numbers in Increasing Order", "Comparing Numbers and Arranging Numbers in Increasing Order", "Arranging Numbers in Decreasing Order", "Comparing Numbers and Arranging Numbers in Decreasing Order", "Missing Numbers", "Ordinal Numbers", "Fractions: ½ and ¼", "Naming Fractions", "Shading Fractions", "Illustrating Addition", "Addition of 1-Digit by 1-Digit", "Addition of 1-Digit by 1-Digit by 1-Digit", "Addition of 2-Digit by 1-Digit without Regrouping", "Addition of 2-Digit by 1-Digit with Regrouping", "Addition of 2-Digit Numbers without Regrouping", "Addition of 2-Digit Numbers with Regrouping", "Illustrating Subtraction", "Parts of the Subtraction", "Subtraction of 2-Digit by 1-Digit without Regrouping", "Subtraction of 2-Digit by 1-Digit with Regrouping", "Subtraction of 2-Digit Numbers without Regrouping", "Subtraction of 2-Digit Numbers with Regrouping", "Naming Shapes: Circle, Square, Rectangle, and Triangle", "Comparing Shapes", "Patterns", "Days of the Week", "Order of Months and Days", "The Calendar", "Reading a Calendar"], "3": ["", "Place Values", "Reading and Writing Numbers", "Writing Numbers in Expanded Form", "Comparing and Ordering Numbers", "Missing Terms in Patterns", "Missing Terms in Patterns", "Missing Terms in Patterns", "Comparing and Arranging Fractions", "Addition of 2-digit and 3-digit Numbers", "Addition of 3-digit Numbers", "Word Problems on Addition", "Subtraction of 2-digit and 3-digit Numbers", "Word Problems on Subtraction", "Understanding Multiplication", "Properties of Multiplication", "Multiplication by 2, 3, 4, 5, and 10", "Understanding Division", "Division by 2, 3, 4, 5, and 10", "Word Problems on Division", "Half Circles and Quarter Circles", "Naming Shapes: Circle, Square, Rectangle, and Triangle", "Geometric Patterns", "Geometric Patterns", "Geometric Visualization"], "4": ["", "Odd and Even Numbers", "Comparing Fractions", "Ordering Fractions Ascending Order", "Fractions Equal or Greater than One", "Reading and Writing Fractions", "Arranging Numbers in Decreasing Order", "Addition of 3- to 4-digit Whole Number without and with Regrouping", "Addition of 2- to 4-digit Whole Number without and with Regrouping and Solving Word Problem in Addition", "Subtraction of 3- to 4-digit Whole Number with and without Regrouping", "Solving Word Problem in Subtraction", "Multiplication of 2- to 3-digit Whole Number by 1-digit Number without or with Regrouping", "Multiplication of 2-digit Whole Number by 2- digit numbers with Regrouping", "Multiplication of 2- to 3-digit Whole Numbers by Multiples of 10 and 100", "Solving Word Problem in Multiplication", "Division of Numbers up to 100 by 6, 7, 8, and 9 (Multiplication Table of 6, 7, 8, and 9)", "Division Facts of Numbers up to 10", "Division of 2-digit Whole Number by 1-digit Whole Number without or with remainder", "Division of 2- to 3-digit Whole Number by 1-digit Whole Number with remainder", "Division of 2-digit Whole Number by 2-digit Whole Number without and with remainder", "Division of 2- to 3-digit Whole Number by 10 and 100", "Point, Line, Line Segment, and Ray", "Parallel, Intersecting, and Perpendicular Lines", "Congruent Line Segment I.", "Visualizing Numbers", "Visualizing Numbers", "Finding the Value and Place Value of a Digit", "Determining the Value of a Digit based on Place Value", "Determining the Value of a Digit based on Place Value and Vice Versa", "Writing Numbers in Words and Vice Versa", "Comparing Numbers Using Relation Symbols", "Rounding Off to a Specific Place Value", "Rounding Off to a Specific Place Value", "Ordering Numbers in Increasing or Decreasing Order", "Ordering Numbers in Increasing or Decreasing Order"], "5": ["", "Visualizing Numbers", "Visualizing Numbers", "Finding the Value and Place Value of a Digit", "Determining the Value of a Digit based on Place Value", "Determining the Value of a Digit based on Place Value and Vice Versa", "Writing Numbers in Words and Vice Versa", "Comparing Numbers Using Relation Symbols", "Rounding Off to a Specific Place Value", "Rounding Off to a Specific Place Value", "Ordering Numbers in Increasing or Decreasing Order", "Ordering Numbers in Increasing or Decreasing Order", "Multiplying Numbers up to Thousands", "Multiplying Numbers up to Thousands and Solving Word Problems Involving Multiplication", "Estimating Products and Solving Word Problems Involving Multiplication", "Estimating Products and Solving Word Problems Involving Multiplication", "Multiplying Mentally", "Multiplying Mentally", "Division", "Division", "Dividing Mentally by Tens, Hundreds, or Thousands", "Dividing Mentally by Tens, Hundreds, or Thousands", "Estimating Quotients", "Division of Whole Numbers", "Division of Whole Numbers", "Estimating Quotient", "Solving Multi-Step Problems Involving Division and Other Operations", "Solving Multi-Step Problems Involving Division and Other Operations", "Order of Operations", "Order of Operations", "Kinds of Angles", "Kinds of Angles", "Kinds of Angles"], "6": ["", "Divisibility Rules", "Divisibility Rules", "Divisibility Rules", "Divisibility Rules", "Order of Operations", "Order of Operations", "Order of Operations", "Order of Operations", "Greatest Common Factor (GCF)", "Least Common Multiple (LCM)", "GCF and LCM", "GCF and LCM", "GCF and LCM", "Multiplication of Fractions", "Multiplication of Fractions", "Multiplication of Whole Numbers, Fractions, and Mixed Numbers", "Multiplication of Fractions", "Multiplication of Fractions", "Division of Fractions", "Division of Fractions", "Division of Fractions", "Division of Fractions", "Division of Fractions", "Division of Fractions", "Polygons", "Polygons", "12- and 24-hour Clock System", "Reading Clocks and Converting to 24-Hour Time", "Reading Clocks and Converting to 24-Hour Time", "Area of a Triangle", "Area of Trapezoid and Area of Parallelogram", "Area of Trapezoid and Area of Parallelogram", "Temperature", "Temperature", "Temperature"], "7": ["", "Adding Similar Fractions", "Subtracting Similar Fractions", "Adding and Subtracting Mixed Numbers", "Adding and Subtracting Mixed Numbers", "Adding and Subtracting Similar Fractions", "Adding and Subtracting Dissimilar Fractions", "Adding and Subtracting Dissimilar Fractions", "Word Problems on Adding and Subtracting Fractions", "Multiplying Fractions", "Multiplying Mixed Numbers", "Multiplying Mixed Numbers", "Dividing Fractions", "Dividing Mixed Numbers", "Adding Decimals", "Adding Decimals", "Subtracting Decimals", "Subtracting Decimals", "Adding and Subtracting Decimals (Word Phrases)", "Multiplying Decimals", "Multiplying Decimals", "Dividing Decimals", "Dividing Whole Numbers by Decimals", "Division by 0.1, 0.01, and 0.001", "Division by 0.1, 0.01, and 0.001 (continued)", "Division by 10, 100, and 1,000", "Division by 10, 100, and 1,000", "Solid Figures", "Cubes", "Triangular Prisms", "Pyramids", "Cylinders", "Cones", "Spheres", "Differentiating Solid and Plane Figures", "Differentiating Speed, Distance, Time", "Calculating Speed, Distance, Time", "Calculating Speed, Distance, Time", "Area of Composite Figures", "Area of Composite Figures", "Area of Composite Figures", "Surface Area of a Rectangular Prism", "Surface Area of a Triangular Prism", "Surface Area of a Cube and a Square Pyramid", "Surface Area of a Cube and Square Pyramid", "Surface Area of a Cylinder", "Surface Area of a Cone and Other Solid Figures", "Surface Area of a Sphere and Other Solid Figures", "Listing Outcomes", "Listing Outcomes", "Listing Outcomes", "Listing Outcomes", "Adding Two Positive Integers; Adding Two Positive Similar Fractions", "Adding Two Negative Integers; Adding Two Negative Similar Fractions", "Adding a Positive and a Negative Integer; Adding a Positive and Negative Fraction", "Adding a Positive and a Negative Integer", "Subtracting Two Positive Integers", "Subtracting Two Negative Integers", "Subtracting a Positive Integer by a Negative Integer", "Subtracting a Negative Integer by a Positive Integer; Subtracting a Negative Fraction by a Positive Fraction", "Subtracting Integers", "Multiplying Two Positive Integers; Multiplying Two Positive Fractions", "Multiplying Two Negative Integers; Multiplying Two Negative Fractions", "Multiplying Two Integers with Different Signs; Multiplying Fractions with Different Signs", "Multiplying Integers", "Division of Two Positive Integers; Division of Two Negative Integers", "Division of Two Integers with Different Signs", "Dividing Integers"], "9": ["", "Adding Two Positive Integers; Adding Two Positive Similar Fractions", "Adding Two Negative Integers; Adding Two Negative Similar Fractions", "Adding a Positive and a Negative Integer; Adding a Positive and Negative Fraction", "Adding a Positive and a Negative Integer", "Subtracting Two Positive Integers", "Subtracting Two Negative Integers", "Subtracting a Positive Integer by a Negative Integer", "Subtracting a Negative Integer by a Positive Integer; Subtracting a Negative Fraction by a Positive Fraction", "Subtracting Integers", "Multiplying Two Positive Integers; Multiplying Two Positive Fractions", "Multiplying Two Negative Integers; Multiplying Two Negative Fractions", "Multiplying Two Integers with Different Signs; Multiplying Fractions with Different Signs", "Multiplying Integers", "Division of Two Positive Integers; Division of Two Negative Integers", "Division of Two Integers with Different Signs", "Dividing Integers", "Performing Series of Operations Involving Fractions and Integers", "Multiplying Decimals and Fractions", "Dividing Decimals and Fractions", "Performing Operations Involving Three Fractions and Decimals", "Performing Operations Involving Three Fractions and Decimals", "Performing Operations Involving Three Fractions and Decimals", "Performing Operations Involving Four Fractions and Decimals", "Performing Operations Involving Four Fractions and Decimals", "Order of Operations", "Evaluating Exponents & Expressing Numbers in Exponential Notation with a Given Base", "Laws of Exponents", "Evaluating Expressions Using the Laws of Exponents", "Product Law and Quotient Law", "Power of Powers Law and Power of Different Bases Law", "Powers of Different Bases Law and Other Laws of Exponents", "Laws of Exponents", "Square Roots", "Translating Expressions into Symbols and Vice Versa", "Evaluating Algebraic Expressions", "Adding Polynomials", "Special Cases on Adding Polynomials", "Subtracting Polynomials", "Polynomial Operations and Functions", "Multiplying Polynomials", "Multiplying Polynomials", "Multiplying Polynomials", "Dividing Polynomials", "Multiplication and Division of Polynomials", "Multiplication and Division of Polynomials", "Linear Equations", "Inequalities", "Solving Inequalities", "Graphing and Solving Inequalities", "Factoring by GCF", "Factoring the Trinomial", "Factoring by Grouping, Word Problems with Factoring", "Factoring the Difference of Two Cubes", "Factoring the Difference of Two Cubes", "Factoring the Sum and Difference of Two Cubes", "Factoring using Various Methods", "Factoring using various methods, Word Problems on Factoring"]};
+
+/* ================= WHERE TO START: from the pretest items missed to the ARAL worksheets that teach them ================= */
+/* One entry per numeracy item (12 per level): [worksheet set, worksheet numbers, skill]. Set 7 = Grades 7 and 8, set 9 = Grades 9 and 10. */
+const rgn = (a, b) => { const o = []; for (let i = a; i <= b; i++) o.push(i); return o; };
+const PLACE = {
+  1: [[1, rgn(1, 4), 'Counting objects'], [1, rgn(1, 4), 'Counting objects'], [1, [5], 'Number order'], [1, [5], 'Missing numbers'], [1, rgn(15, 18), 'Addition facts to 10'], [1, rgn(15, 18), 'Addition facts to 10'], [1, rgn(15, 18), 'Addition facts to 10'], [1, rgn(19, 23), 'Addition facts to 20'], [1, rgn(19, 23), 'Addition facts to 20'], [2, [7], 'Comparing numbers'], [2, [7], 'Comparing numbers'], [1, [24, 25], 'Number words']],
+  2: [[2, [7], 'Comparing numbers'], [2, [8, 9], 'Arranging numbers in order'], [2, [5, 6], 'Number words'], [2, [12], 'Missing numbers'], [2, [19], 'Adding three 1-digit numbers'], [2, [20, 21], 'Adding a 2-digit and a 1-digit number'], [2, [22, 23], 'Adding 2-digit numbers'], [2, [26, 27], 'Subtracting a 1-digit from a 2-digit number'], [2, [28], 'Subtracting 2-digit numbers'], [2, [29], 'Subtracting with regrouping'], [3, [11, 13], 'Word problems (add and subtract)'], [3, [11, 13], 'Word problems (add and subtract)']],
+  3: [[3, [1], 'Place value'], [3, [5, 6, 7], 'Patterns'], [3, [10], 'Adding 3-digit numbers'], [3, [9], 'Adding 2-digit and 3-digit numbers'], [3, [12], 'Subtraction'], [3, [12], 'Subtraction'], [3, [14, 15, 16], 'Multiplication by 2, 3, 4, 5, 10'], [3, [14, 15, 16], 'Multiplication by 2, 3, 4, 5, 10'], [3, [17, 18], 'Division by 2, 3, 4, 5, 10'], [3, [17, 18], 'Division by 2, 3, 4, 5, 10'], [3, [11, 13, 19], 'Word problems'], [3, [11, 13, 19], 'Word problems']],
+  4: [[4, [31, 32], 'Rounding off'], [4, [2], 'Comparing fractions'], [4, [7, 8], 'Adding whole numbers'], [4, [9], 'Subtracting whole numbers'], [4, [11], 'Multiplying by a 1-digit number'], [4, [12], 'Multiplying 2-digit numbers'], [4, [13], 'Multiplying by multiples of 10 and 100'], [4, [15, 16], 'Division facts'], [4, [17, 18, 19], 'Division with remainders'], [4, [17, 18, 19], 'Division with remainders'], [4, [10, 14], 'Word problems'], [4, [10, 14], 'Word problems']],
+  5: [[5, [3, 4, 5], 'Place value'], [5, [8, 9], 'Rounding off'], [5, [12, 13], 'Multiplying up to thousands'], [5, [12, 13], 'Multiplying up to thousands'], [5, [16, 17], 'Multiplying mentally'], [5, [18, 19], 'Division'], [5, [23, 24], 'Division of whole numbers'], [5, [20, 21], 'Dividing by tens, hundreds, thousands'], [5, [28, 29], 'Order of operations'], [5, [28, 29], 'Order of operations'], [5, [26, 27], 'Multi-step problems'], [5, [26, 27], 'Multi-step problems']],
+  6: [[6, rgn(1, 4), 'Divisibility rules'], [6, rgn(5, 8), 'Order of operations'], [6, [9, 11, 12, 13], 'Greatest common factor'], [6, [10, 11, 12, 13], 'Least common multiple'], [6, [14, 15, 17, 18], 'Multiplying fractions'], [6, [14, 15, 17, 18], 'Multiplying fractions'], [6, [16], 'Multiplying whole numbers and fractions'], [6, rgn(19, 24), 'Dividing fractions'], [6, rgn(19, 24), 'Dividing fractions'], [6, [30], 'Area of a triangle'], [6, [14, 16, 19], 'Fraction word problems'], [6, [14, 16, 19], 'Fraction word problems']],
+  7: [[7, [6, 7], 'Adding fractions with unlike denominators'], [7, [6, 7], 'Subtracting fractions with unlike denominators'], [7, [9], 'Multiplying fractions'], [7, [12], 'Dividing fractions'], [7, [14, 15], 'Adding decimals'], [7, [16, 17], 'Subtracting decimals'], [7, [19, 20], 'Multiplying decimals'], [7, [23, 24], 'Division by 0.1, 0.01, 0.001'], [7, rgn(52, 55), 'Adding integers'], [7, rgn(56, 60), 'Subtracting integers'], [7, [54, 55, 58, 59], 'Integer word problems'], [7, [54, 55, 58, 59], 'Integer word problems']],
+  8: [[7, rgn(52, 55), 'Adding integers'], [7, rgn(56, 60), 'Subtracting integers'], [7, rgn(61, 64), 'Multiplying integers'], [7, rgn(65, 67), 'Dividing integers'], [7, rgn(52, 55), 'Adding signed fractions'], [7, rgn(56, 60), 'Subtracting signed fractions'], [7, rgn(61, 64), 'Multiplying signed fractions'], [7, [21], 'Dividing decimals'], [7, [35, 36, 37], 'Speed, distance, time'], [7, [41, 43, 44], 'Surface area'], [7, [54, 55, 58, 59], 'Integer word problems'], [7, [54, 55, 58, 59], 'Integer word problems']],
+  9: [[9, [17, 25], 'Order of operations'], [9, [17, 25], 'Order of operations'], [9, [18, 19], 'Multiplying fractions'], [9, [27, 29, 30], 'Laws of exponents'], [9, [33], 'Square roots'], [9, [35], 'Evaluating expressions'], [9, [36, 37, 38], 'Adding and subtracting polynomials'], [9, [36, 37, 38], 'Adding and subtracting polynomials'], [9, [46], 'Linear equations'], [9, [50, 51], 'Factoring'], [9, [34, 46], 'Word problems with equations'], [9, [34, 46], 'Word problems with equations']],
+  10: [[9, [25, 26], 'Order of operations with exponents'], [9, [25, 26], 'Order of operations with exponents'], [9, [27, 29, 30, 31, 32], 'Laws of exponents'], [9, [33], 'Square roots'], [9, [35], 'Evaluating expressions'], [9, [40, 41, 42], 'Multiplying polynomials'], [9, [40, 41, 42], 'Multiplying polynomials'], [9, [46], 'Linear equations'], [9, [47, 48, 49], 'Inequalities'], [9, [50, 51, 52], 'Factoring'], [9, [34, 46], 'Word problems with equations'], [9, [34, 46], 'Word problems with equations']]
+};
+function fmtWs(list) {
+  const out = []; let i = 0;
+  while (i < list.length) { let j = i; while (j + 1 < list.length && list[j + 1] === list[j] + 1) j++; out.push(j - i >= 1 ? list[i] + '\u2013' + list[j] : String(list[i])); i = j + 1; }
+  return out.join(', ');
+}
+/* marks: 12 booleans (true = correct). Returns the areas missed, earliest worksheets first. */
+function placeGroups(level, marks) {
+  const g = {};
+  (PLACE[level] || []).forEach((p, i) => { if (marks[i]) return; const key = p[0] + '|' + p[1].join(',') + '|' + p[2]; if (!g[key]) g[key] = { set: p[0], ws: p[1], skill: p[2], n: 0, wp: /problem/i.test(p[2]) ? 1 : 0 }; g[key].n++; });
+  return Object.values(g).sort((a, b) => a.wp - b.wp || a.set - b.set || a.ws[0] - b.ws[0]); /* word problems last: they mix several skills */
+}
+if (typeof module !== 'undefined') module.exports = { PLACE, fmtWs, placeGroups };
 
 /* ================= CONFIG ================= */
 const CONFIG = {
@@ -992,6 +1024,7 @@ async function finishLogin(district, code, remember, res) {
 }
 function logout(silent) {
   if (!silent && D().queue.length && !confirm(D().queue.length + ' items are still waiting to send. If you sign out now they stay on this phone until you sign in again. Sign out?')) return;
+  if (!D().queue.length) delete P.data[P.session.tutor_id]; // everything is sent, so the learner list leaves this phone
   P.session = null; save(); render();
 }
 
@@ -1034,6 +1067,22 @@ function closeTest() { setKey(null); const t = $('#test'); t.hidden = true; t.in
 function resultsFor(lid) { const out = {}; Object.values(D().results).forEach(r => { if (r.learner_id === lid) (out[r.domain] = out[r.domain] || {})[r.phase] = r; }); return out; }
 function resLine(r) { if (!r) return '—'; if (r.mode === 'passage') return Math.round(r.pct) + '% (passage, ' + r.raw + '/4 questions)'; return r.raw + '/' + r.total + ' (' + Math.round(r.pct) + '%)' + (r.domain === 'numeracy' ? '' : ' · Task ' + (r.reading_level || 0)); }
 
+/* Where to start: the items missed on the pretest point to the ARAL worksheets that teach them */
+function startLine(g) { const t = WS_TITLES[g.set] && WS_TITLES[g.set][g.ws[0]]; return h('li', {}, h('b', {}, setLabel(g.set) + ' WS ' + fmtWs(g.ws)), ': ' + g.skill + ' (' + g.n + ' missed)' + (g.ws.length === 1 && t ? '' : '')); }
+function startPanel(level, marks) {
+  const gs = placeGroups(level, marks);
+  if (!gs.length) return h('div', { class: 'startbox' }, h('strong', {}, 'Where to start'), h('p', { class: 'sub' }, 'No gaps on this test. Begin with the next topics in the learner’s grade, or try Level ' + Math.min(10, level + 1) + '.'));
+  return h('div', { class: 'startbox' }, h('strong', {}, 'Where to start'), h('p', { class: 'sub' }, 'The items missed point to these ARAL worksheets. Begin with the first one.'), h('ol', {}, gs.slice(0, 5).map(startLine)), gs.length > 5 ? h('p', { class: 'hint' }, '+ ' + (gs.length - 5) + ' more areas') : null);
+}
+function preMarks(l, res) { const lv = Number(res.test_level) || Number(l.grade); const items = genNumeracy(l.id, res.form, lv); const ans = String(res.answers || '').split(';'); return { level: lv, marks: items.map((it, i) => isCorrect(it, ans[i])) }; }
+function learnerStart(l, R) { const pre = R.numeracy && R.numeracy.pre; if (!pre || !pre.answers) return null; const m = preMarks(l, pre); return startPanel(m.level, m.marks); }
+function startHint(l) {
+  const pre = (resultsFor(l.id).numeracy || {}).pre; if (!pre || !pre.answers) return null;
+  if (D().tracker.some(t => t.learner_id === l.id && t.domain === 'math')) return null;
+  const m = preMarks(l, pre); const gs = placeGroups(m.level, m.marks); if (!gs.length) return null;
+  return h('p', { class: 'hint' }, 'From the pretest, start with ' + setLabel(gs[0].set) + ' WS ' + fmtWs(gs[0].ws) + ' (' + gs[0].skill + ').');
+}
+
 function sheetLearner(id) {
   const l = learnerById(id); if (!l) return; const R = resultsFor(id);
   const doms = Object.keys(R).sort();
@@ -1041,6 +1090,7 @@ function sheetLearner(id) {
     h('h2', {}, l.name), h('p', { class: 'sub' }, 'Grade ' + l.grade + ' · ' + (l.school || 'No school') + ' · ' + (l.group === 'pullout' ? 'Pull-out group' : 'Regular group') + ' · Code ' + l.id),
     h('div', { class: 'two' }, h('button', { class: 'btn primary', onclick: () => { closeSheet(); sheetNumLaunch(id); } }, 'Numeracy ' + (S.phase === 'pre' ? 'pretest' : 'posttest')), h('button', { class: 'btn primary', onclick: () => { closeSheet(); sheetReadLaunch(id); } }, 'Reading ' + (S.phase === 'pre' ? 'pretest' : 'posttest'))),
     h('div', { class: 'two' }, h('button', { class: 'btn', onclick: () => { closeSheet(); S.tab = 'session'; S.openRow = id; render(); } }, 'Log a session'), h('button', { class: 'btn', onclick: () => { closeSheet(); sheetEdit(id); } }, 'Edit learner')),
+    learnerStart(l, R),
     doms.length ? h('table', { class: 'mini' }, h('thead', {}, h('tr', {}, h('th', {}, ''), h('th', {}, 'Pretest'), h('th', {}, 'Posttest'))), h('tbody', {}, doms.map(d => h('tr', {}, h('th', {}, domLabel(d)), h('td', {}, resLine(R[d].pre)), h('td', {}, resLine(R[d].post)))))) : h('p', { class: 'sub' }, 'No test results yet.')));
 }
 
@@ -1084,7 +1134,7 @@ function sheetNumLaunch(id) {
   const lv = h('select', { id: 'numLevel', disabled: !!preLv }, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(g => h('option', { value: g, selected: g === (preLv || Number(l.grade)) }, 'Level ' + g + ' · ' + LEVEL_NOTE[g])));
   let mode = 'device'; const mb = h('div', { class: 'seg' }, [['device', 'Learner answers on this phone'], ['paper', 'Enter answers from paper']].map(([k, t]) => h('button', { class: k === mode ? 'on' : '', onclick: e => { mode = k; [...mb.children].forEach(c => c.classList.remove('on')); e.currentTarget.classList.add('on'); } }, t)));
   const have = D().results[rkey(id, 'numeracy', phase)];
-  openSheet(h('div', { class: 'stack' }, h('h2', {}, 'Numeracy ' + phaseLabel(phase).toLowerCase()), h('p', { class: 'sub' }, l.name + ' · Grade ' + l.grade + ' · Form ' + form), have ? h('p', { class: 'warn' }, 'This learner already has a ' + phaseLabel(phase).toLowerCase() + ' score (' + resLine(have) + '). Starting again replaces it.') : null,
+  openSheet(h('div', { class: 'stack' }, h('h2', {}, 'Numeracy ' + phaseLabel(phase).toLowerCase()), h('p', { class: 'sub' }, l.name + ' · Grade ' + l.grade + ' · Form ' + form), have ? h('p', { class: 'warn' }, 'This learner already has a ' + phaseLabel(phase).toLowerCase() + ' score (' + resLine(have) + '). Starting again replaces it.') : null, phase === 'post' && !preN ? h('p', { class: 'warn' }, 'No pretest is on file for this learner, so this posttest will not count toward the gain. You can still save it.') : null,
     h('label', { class: 'fld' }, h('span', {}, 'Test level (choose a lower level for a learner who is behind)'), lv), preLv ? h('p', { class: 'hint' }, 'The pretest used Level ' + preLv + ', so the posttest uses the same level. That keeps the two scores comparable.') : null, mb,
     h('div', { class: 'two' }, h('button', { class: 'btn', onclick: () => printNum(l, phase, Number(lv.value)) }, 'Print the test'), h('button', { class: 'btn primary', onclick: () => { closeSheet(); runNumeracy(l, phase, Number(lv.value), mode); } }, 'Start'))));
 }
@@ -1150,6 +1200,7 @@ function finishNumeracy(T) {
   };
   wrap.append(h('div', { class: 'tbody scroll' }, h('div', { class: 'score' }, raw === total ? h('span', { class: 'star', 'aria-hidden': 'true' }, '★') : null, h('div', { class: 'big' }, raw + ' / ' + total), h('p', {}, T.l.name + ' · ' + Math.round(pct) + '%')),
     h('div', { class: 'marks' }, T.items.map((it, i) => h('span', { class: 'mk ' + (marks[i] ? 'good' : 'bad'), title: 'Item ' + it.no }, marks[i] ? it.no : '○' + it.no))),
+    T.phase === 'pre' ? startPanel(T.level, marks) : null,
     h('p', { class: 'sub' }, 'A ○ marks an item to review with the learner. Correct answers are not shown so Form ' + (T.phase === 'pre' ? 'A' : 'B') + ' stays fair.'),
     h('label', { class: 'fld' }, h('span', {}, 'Addition facts in 1 minute (optional, timed by you)'), fl)),
     h('div', { class: 'tfoot' }, h('button', { class: 'btn', onclick: () => { runNumeracy(T.l, T.phase, T.level, T.mode); } }, 'Redo'), h('button', { class: 'btn primary', onclick: () => { res.fluency = fl.value === '' ? '' : Number(fl.value); addOp('result', res); toast('Saved'); closeTest(); } }, 'Save result')));
@@ -1158,7 +1209,7 @@ function finishNumeracy(T) {
 
 /* ================= READING TEST (check-in tool) ================= */
 function sheetReadLaunch(id) {
-  const l = learnerById(id); const phase = S.phase; let lang = 'en'; let tool = Number(l.grade) >= 4 ? 'passage' : 'checkin';
+  const l = learnerById(id); const phase = S.phase; let lang = 'en'; if (phase === 'post' && !D().results[rkey(id, 'reading_en', 'pre')] && D().results[rkey(id, 'reading_fil', 'pre')]) lang = 'fil'; let tool = Number(l.grade) >= 4 ? 'passage' : 'checkin';
   const lb = h('div', { class: 'seg' }, [['en', 'English'], ['fil', 'Filipino']].map(([k, t]) => h('button', { class: k === lang ? 'on' : '', onclick: e => { lang = k; [...lb.children].forEach(c => c.classList.remove('on')); e.currentTarget.classList.add('on'); upd(); } }, t)));
   const tb = h('div', { class: 'seg' }, [['checkin', 'Check-in: letters to sentences'], ['passage', 'Passage and questions']].map(([k, t]) => h('button', { id: 'tool_' + k, class: k === tool ? 'on' : '', onclick: () => { if (!forced()) { tool = k; upd(); } } }, t)));
   const para = h('input', { type: 'checkbox', id: 'rdPara', checked: Number(l.grade) >= 3 });
@@ -1173,6 +1224,7 @@ function sheetReadLaunch(id) {
       ? 'For beginning readers, like the ARAL-Reading check-in: the learner reads aloud one task at a time (letters, syllables, words, phrases, sentences, then two questions). Tap each item read correctly and it turns green. A timer runs from Start. Finish all tasks even if there are mistakes.'
       : 'For learners who already read sentences: the learner reads a short passage aloud (you count the mistakes and the time), then you ask four questions' + (Number(l.grade) >= 7 ? ' (junior high passage: word meaning, conclusion, author’s purpose, fact or opinion)' : ' (detail, word meaning, cause and effect, conclusion)') + '. Choose the tool at the pretest and use it again at the posttest.');
     warn.innerHTML = ''; const have = D().results[rkey(id, 'reading_' + lang, phase)]; if (have) warn.append(h('p', { class: 'warn' }, 'Already has a ' + phaseLabel(phase).toLowerCase() + ' reading result (' + resLine(have) + '). Starting again replaces it.'));
+    if (phase === 'post' && !D().results[rkey(id, 'reading_' + lang, 'pre')]) warn.append(h('p', { class: 'warn' }, 'No ' + (lang === 'en' ? 'English' : 'Filipino') + ' pretest is on file for this learner, so this posttest will not count toward the gain.'));
   }; upd();
   openSheet(h('div', { class: 'stack' }, h('h2', {}, 'Reading ' + phaseLabel(phase).toLowerCase()), h('p', { class: 'sub' }, l.name + ' · Grade ' + l.grade + ' · Form ' + (phase === 'pre' ? 'A' : 'B')),
     h('label', { class: 'fld' }, h('span', {}, 'Language'), lb), h('label', { class: 'fld' }, h('span', {}, 'Reading tool'), tb), note, paraRow, warn,
@@ -1237,9 +1289,10 @@ function finishReading(R, sc, stopFn) {
     key: rkey(R.l.id, 'reading_' + R.lang, R.phase), learner_id: R.l.id, tutor_id: P.session.tutor_id, school: R.l.school, grade: R.l.grade, domain: 'reading_' + R.lang, phase: R.phase, form: R.form, test_level: '',
     answers, raw: sc.raw, total: sc.total, pct: sc.pct, reading_level: level, fluency: '', mic_n: micN, mic_agree: micAgree, lang: R.lang, mode: 'tutor', date: todayISO(), duration_s: secs
   };
+  const focusMap = { 1: 'letter names and sounds', 2: 'syllables', 3: 'reading short words', 4: 'phrases', 5: 'sentences', 6: 'answering questions about what was read' }; const firstGap = KS1_TASKS.find(t => sc.per[t.id] < passNeed(t.n)); const focusLine = firstGap ? 'Where to start: ' + focusMap[firstGap.id] + ' (Task ' + firstGap.id + ').' : 'Where to start: short paragraphs and longer texts. Consider the Plus guide.';
   const mastered = level === 0 ? 'No task mastered yet' : level >= 7 ? 'All tasks mastered, paragraph included' : 'Mastered up to Task ' + level + ' (' + KS1_TASKS[level - 1].name + ')';
   const wrap = h('div', { class: 'tview' });
-  wrap.append(h('div', { class: 'tbody scroll' }, h('div', { class: 'score' }, sc.raw === sc.total ? h('span', { class: 'star', 'aria-hidden': 'true' }, '★') : null, h('div', { class: 'big' }, sc.raw + ' / ' + sc.total), h('p', {}, R.l.name + ' · ' + KS1[R.lang].label + ' · ' + Math.round(sc.pct) + '%'), h('p', {}, mastered)),
+  wrap.append(h('div', { class: 'tbody scroll' }, h('div', { class: 'score' }, sc.raw === sc.total ? h('span', { class: 'star', 'aria-hidden': 'true' }, '★') : null, h('div', { class: 'big' }, sc.raw + ' / ' + sc.total), h('p', {}, R.l.name + ' · ' + KS1[R.lang].label + ' · ' + Math.round(sc.pct) + '%'), h('p', {}, mastered), h('p', { class: 'sub' }, focusLine)),
     h('div', { class: 'ladder' }, KS1_TASKS.map(t => h('div', { class: 'rung ' + (sc.per[t.id] >= passNeed(t.n) ? 'good' : 'bad') }, h('b', {}, t.id), h('span', {}, t.name), h('em', {}, sc.per[t.id] + ' / ' + t.n))), R.para ? h('div', { class: 'rung ' + (paraOk ? 'good' : 'bad') }, h('b', {}, 7), h('span', {}, 'Paragraph'), h('em', {}, paraOk ? 'passed' : 'not yet')) : null),
     h('p', { class: 'sub' }, 'Time: ' + Math.floor(secs / 60) + ':' + String(secs % 60).padStart(2, '0') + (micN ? ' · The microphone agreed with your ticks on ' + micAgree + ' of ' + micN + ' items.' : '')),
     h('label', { class: 'fld' }, h('span', {}, 'Ask the learner: how sure are you about reading? (optional)'), conf)),
@@ -1277,7 +1330,7 @@ function runPassage(l, phase, lang, ks) {
   openTest(wrap); draw();
 }
 function finishPassage(R, l, phase, lang, form, words, ks) {
-  const correct = R.marks.reduce((a, b) => a + b, 0); const sc = scorePassage(words, R.miscues, R.secs, correct); setKey(null);
+  const correct = R.marks.reduce((a, b) => a + b, 0); const sc = scorePassage(words, R.miscues, R.secs, correct); const missedTypes = (ks === 3 ? PLUS3 : PLUS)[lang][form].qs.filter((q, i) => !R.marks[i]).map(q => q[2]); setKey(null);
   const res = {
     key: rkey(l.id, 'reading_' + lang, phase), learner_id: l.id, tutor_id: P.session.tutor_id, school: l.school, grade: l.grade, domain: 'reading_' + lang, phase, form, test_level: ks,
     answers: 'PR:m' + R.miscues + ';T:' + R.secs + ';Q:' + R.marks.join(''), raw: correct, total: 4, pct: sc.pct, reading_level: correct, fluency: sc.wcpm, mic_n: '', mic_agree: '', lang, mode: 'passage', date: todayISO(), duration_s: R.secs
@@ -1285,7 +1338,7 @@ function finishPassage(R, l, phase, lang, form, words, ks) {
   const wrap = h('div', { class: 'tview' });
   wrap.append(h('div', { class: 'tbody scroll' }, h('div', { class: 'score' }, sc.pct >= 100 ? h('span', { class: 'star', 'aria-hidden': 'true' }, '★') : null, h('div', { class: 'big' }, Math.round(sc.pct) + '%'), h('p', {}, l.name + ' · ' + KS1[lang].label + ' · Passage')),
     h('div', { class: 'ladder' }, h('div', { class: 'rung ' + (sc.acc >= 90 ? 'good' : 'bad') }, h('b', {}, '1'), h('span', {}, 'Reading accuracy'), h('em', {}, Math.round(sc.acc) + '%')), h('div', { class: 'rung ' + (correct >= 3 ? 'good' : 'bad') }, h('b', {}, '2'), h('span', {}, 'Questions'), h('em', {}, correct + ' / 4')), h('div', { class: 'rung skip' }, h('b', {}, '3'), h('span', {}, 'Words correct per minute'), h('em', {}, String(sc.wcpm)))),
-    h('p', { class: 'sub' }, 'The score is half reading accuracy and half questions. Words per minute is recorded separately.')),
+    missedTypes.length ? h('p', { class: 'sub' }, 'Practice next: ' + missedTypes.join(', ').toLowerCase() + '.') : null, h('p', { class: 'sub' }, 'The score is half reading accuracy and half questions. Words per minute is recorded separately.')),
     h('div', { class: 'tfoot' }, h('button', { class: 'btn', onclick: () => runPassage(l, phase, lang, ks) }, 'Redo'), h('button', { class: 'btn primary', id: 'btnSavePass', onclick: () => { addOp('result', res); toast('Saved'); closeTest(); } }, 'Save result')));
   openTest(wrap);
 }
@@ -1330,7 +1383,7 @@ function sessionPanel(l, date) {
   showWs();
   const setSel = math ? h('label', { class: 'fld' }, h('span', {}, 'Worksheet set (ARAL Math)'), h('select', { id: 'wsSet', onchange: e => { setG = Number(e.target.value); ws = Math.min(nextWs(), maxWs()); showWs(); } }, [1, 2, 3, 4, 5, 6, 7, 9].map(g => h('option', { value: g, selected: g === setG }, g === 7 ? 'Grades 7 and 8' : g === 9 ? 'Grades 9 and 10' : 'Grade ' + g)))) : null;
   const mk = absent => addOp('tracker', { entry_id: uid(), learner_id: l.id, tutor_id: P.session.tutor_id, date, domain: dom, worksheet: absent ? '' : ws, tri: absent ? 0 : tri, circ: absent ? 0 : circ, retries: absent ? 0 : ret, absent: absent ? 1 : 0, note: math ? 'set:G' + setG : '', created_at: new Date().toISOString() });
-  return h('div', { class: 'spanel' }, setSel, wsRow, wsTitle, val(() => tri, v => { tri = v; }, 0, 99, '△ partly correct'), val(() => circ, v => { circ = v; }, 0, 99, '○ wrong'), val(() => ret, v => { ret = v; }, 0, 20, 'Redo rounds'), status,
+  return h('div', { class: 'spanel' }, startHint(l), setSel, wsRow, wsTitle, val(() => tri, v => { tri = v; }, 0, 99, '△ partly correct'), val(() => circ, v => { circ = v; }, 0, 99, '○ wrong'), val(() => ret, v => { ret = v; }, 0, 20, 'Redo rounds'), status,
     h('div', { class: 'two' }, h('button', { class: 'btn', onclick: () => { mk(true); S.openRow = null; render(); toast(l.name + ' marked absent'); } }, 'Absent'), h('button', { class: 'btn primary', onclick: () => { mk(false); S.openRow = null; render(); toast('Saved worksheet ' + ws); } }, 'Save worksheet')));
 }
 
@@ -1426,7 +1479,7 @@ function scrAccount() {
     h('div', { class: 'two' }, h('button', { class: 'btn', onclick: () => { S.phase = 'pre'; S.tab = 'learners'; render(); } }, 'Open Pretest'), h('button', { class: 'btn', onclick: () => { S.phase = 'post'; S.tab = 'learners'; render(); } }, 'Open Posttest')),
     h('a', { class: 'btn wide', id: 'linkEngage', href: CONFIG.ENGAGEMENT_URL, target: '_blank', rel: 'noopener' }, 'Open DTR and Accomplishment (ARAL Tutor Engagement)'),
     h('button', { class: 'btn wide', onclick: () => sheetHelp() }, 'How to use this app'),
-    h('button', { class: 'btn danger wide', onclick: () => logout(false) }, 'Sign out'),
+    h('p', { class: 'hint' }, 'When everything has been sent, signing out also removes the learner list from this phone. You get it back when you sign in again.'), h('button', { class: 'btn danger wide', onclick: () => logout(false) }, 'Sign out'),
     h('p', { class: 'hint' }, 'Version ' + CONFIG.VERSION + '. Your work is saved on this phone first and sent when there is signal. Learner names are only in your district sheet; Division reports use learner codes.'));
 }
 
@@ -1470,6 +1523,8 @@ function sheetHelp(open) {
 /* ================= BOOT ================= */
 function boot() { render(); if (P.session) sync(); }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+/* Ask the browser to keep this phone's data, and let the app reopen without signal */
+try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {}); } catch (e) { /* not supported */ }
 
 </script>
 </body>
