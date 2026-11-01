@@ -146,6 +146,7 @@ table.mini{width:100%;border-collapse:collapse;font-size:14px}.mini th,.mini td{
 .rtile.on{border-color:var(--leaf);background:var(--leaf-l)}.rtile.on .tick{display:grid}.rtile.sug{border-style:dashed;border-color:var(--sea)}
 .rtile .ans{display:block;font-family:var(--body);font-size:14px;color:var(--ink2);margin-top:4px}
 .passage.small{font-size:17px;line-height:1.55;padding:12px}
+.glist{display:flex;flex-direction:column;gap:8px;max-height:46vh;overflow:auto}.grow{display:grid;grid-template-columns:1fr minmax(150px,200px);gap:6px 10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#fff}.grow.perfect{border-color:var(--sun);background:var(--sun-l)}.grow.redo{border-color:var(--coral);background:var(--coral-l)}.grow.absent{background:#EEF1F6}.gnums{grid-column:1/-1;display:flex;gap:10px}.gnum{display:flex;align-items:center;gap:6px;font-weight:700}.gnum input{width:72px;min-height:40px}
 .stat{padding:10px 12px;border-radius:10px;font-weight:700;text-align:center}.stat.perfect{background:var(--sun-l);color:#7A5600}.stat.redo{background:var(--coral-l);color:var(--coral)}
 
 /* report */
@@ -1079,11 +1080,12 @@ function sheetEdit(id) {
 /* ================= NUMERACY TEST ================= */
 function sheetNumLaunch(id) {
   const l = learnerById(id); const phase = S.phase; const form = phase === 'pre' ? 'A' : 'B';
-  const lv = h('select', {}, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(g => h('option', { value: g, selected: g === Number(l.grade) }, 'Level ' + g + ' · ' + LEVEL_NOTE[g])));
+  const preN = phase === 'post' ? D().results[rkey(id, 'numeracy', 'pre')] : null; const preLv = preN && Number(preN.test_level) ? Number(preN.test_level) : 0;
+  const lv = h('select', { id: 'numLevel', disabled: !!preLv }, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(g => h('option', { value: g, selected: g === (preLv || Number(l.grade)) }, 'Level ' + g + ' · ' + LEVEL_NOTE[g])));
   let mode = 'device'; const mb = h('div', { class: 'seg' }, [['device', 'Learner answers on this phone'], ['paper', 'Enter answers from paper']].map(([k, t]) => h('button', { class: k === mode ? 'on' : '', onclick: e => { mode = k; [...mb.children].forEach(c => c.classList.remove('on')); e.currentTarget.classList.add('on'); } }, t)));
   const have = D().results[rkey(id, 'numeracy', phase)];
   openSheet(h('div', { class: 'stack' }, h('h2', {}, 'Numeracy ' + phaseLabel(phase).toLowerCase()), h('p', { class: 'sub' }, l.name + ' · Grade ' + l.grade + ' · Form ' + form), have ? h('p', { class: 'warn' }, 'This learner already has a ' + phaseLabel(phase).toLowerCase() + ' score (' + resLine(have) + '). Starting again replaces it.') : null,
-    h('label', { class: 'fld' }, h('span', {}, 'Test level (choose a lower level for a learner who is behind)'), lv), mb,
+    h('label', { class: 'fld' }, h('span', {}, 'Test level (choose a lower level for a learner who is behind)'), lv), preLv ? h('p', { class: 'hint' }, 'The pretest used Level ' + preLv + ', so the posttest uses the same level. That keeps the two scores comparable.') : null, mb,
     h('div', { class: 'two' }, h('button', { class: 'btn', onclick: () => printNum(l, phase, Number(lv.value)) }, 'Print the test'), h('button', { class: 'btn primary', onclick: () => { closeSheet(); runNumeracy(l, phase, Number(lv.value), mode); } }, 'Start'))));
 }
 function qEl(it) { return h('div', { class: 'q' }, it.big ? h('div', { class: 'bigemo', 'aria-label': 'Picture to count' }, it.big) : null, h('div', { class: 'qt' }, richText(it.q))); }
@@ -1301,7 +1303,7 @@ function scrSession() {
   const seg = h('div', { class: 'seg' }, [['math', 'Math worksheets'], ['reading', 'Reading']].map(([k, t]) => h('button', { class: S.sdom === k ? 'on' : '', onclick: () => { S.sdom = k; render(); } }, t)));
   const L = activeLearners(); const todays = D().tracker.filter(t => t.date === date);
   const presentIds = new Set(todays.filter(t => !Number(t.absent)).map(t => t.learner_id));
-  box.append(legend(), h('div', { class: 'sumline' }, h('strong', {}, 'Session log'), h('span', {}, presentIds.size + ' present · ' + todays.filter(t => Number(t.absent)).length + ' absent')), h('div', { class: 'two' }, h('label', { class: 'fld' }, h('span', {}, 'Date'), dateIn), h('div', { class: 'fld' }, h('span', {}, 'Subject'), seg)));
+  box.append(legend(), h('button', { class: 'btn primary wide', id: 'btnGroup', onclick: () => sheetGroupLog(date) }, 'Log the whole group at once'), h('div', { class: 'sumline' }, h('strong', {}, 'Session log'), h('span', {}, presentIds.size + ' present · ' + todays.filter(t => Number(t.absent)).length + ' absent')), h('div', { class: 'two' }, h('label', { class: 'fld' }, h('span', {}, 'Date'), dateIn), h('div', { class: 'fld' }, h('span', {}, 'Subject'), seg)));
   if (!L.length) { box.append(h('div', { class: 'empty' }, h('p', {}, 'Add learners first.'), h('button', { class: 'btn primary', onclick: () => { S.tab = 'learners'; render(); } }, 'Go to Learners'))); return box; }
   L.forEach(l => {
     const mine = todays.filter(t => t.learner_id === l.id && t.domain === S.sdom); const absent = todays.some(t => t.learner_id === l.id && Number(t.absent));
@@ -1330,6 +1332,43 @@ function sessionPanel(l, date) {
   const mk = absent => addOp('tracker', { entry_id: uid(), learner_id: l.id, tutor_id: P.session.tutor_id, date, domain: dom, worksheet: absent ? '' : ws, tri: absent ? 0 : tri, circ: absent ? 0 : circ, retries: absent ? 0 : ret, absent: absent ? 1 : 0, note: math ? 'set:G' + setG : '', created_at: new Date().toISOString() });
   return h('div', { class: 'spanel' }, setSel, wsRow, wsTitle, val(() => tri, v => { tri = v; }, 0, 99, '△ partly correct'), val(() => circ, v => { circ = v; }, 0, 99, '○ wrong'), val(() => ret, v => { ret = v; }, 0, 20, 'Redo rounds'), status,
     h('div', { class: 'two' }, h('button', { class: 'btn', onclick: () => { mk(true); S.openRow = null; render(); toast(l.name + ' marked absent'); } }, 'Absent'), h('button', { class: 'btn primary', onclick: () => { mk(false); S.openRow = null; render(); toast('Saved worksheet ' + ws); } }, 'Save worksheet')));
+}
+
+/* One tap per learner: the same worksheet for the whole group, with exceptions (needs redo or absent) */
+function sheetGroupLog(date) {
+  const dom = S.sdom; const math = dom === 'math'; const L = activeLearners();
+  if (!L.length) { toast('Add learners first.'); return; }
+  const grades = {}; L.forEach(l => { const g = canonSet(Math.min(Number(l.grade) || 1, 10)); grades[g] = (grades[g] || 0) + 1; });
+  let setG = math ? Number(Object.keys(grades).sort((a, b) => grades[b] - grades[a])[0]) : 0;
+  const maxWs = () => (math && WS_TITLES[setG] ? WS_TITLES[setG].length - 1 : 999);
+  const guessWs = () => { const c = {}; L.forEach(l => { const le = lastEntry(l.id, dom, math ? setG : null); const n = le ? (Number(le.tri) || Number(le.circ) ? Number(le.worksheet) : Number(le.worksheet) + 1) : 1; c[n] = (c[n] || 0) + 1; }); return Math.min(Number(Object.keys(c).sort((a, b) => c[b] - c[a])[0]), maxWs()); };
+  let ws = guessWs(); const rows = L.map(l => ({ l, st: 'skip', tri: 0, circ: 0 }));
+  const wsNum = h('strong', {}, String(ws)); const wsTitle = h('div', { class: 'wstitle' }); const list = h('div', { class: 'glist' }); const msg = h('p', { class: 'err', role: 'alert' });
+  const showWs = () => { wsNum.textContent = ws; const t = math && WS_TITLES[setG] ? WS_TITLES[setG][ws] : ''; wsTitle.textContent = t || ''; wsTitle.hidden = !t; };
+  const counts = () => { const c = { perfect: 0, redo: 0, absent: 0, skip: 0 }; rows.forEach(r => { c[r.st]++; }); return c; };
+  const sum = h('p', { class: 'sub' });
+  const draw = () => {
+    list.innerHTML = '';
+    rows.forEach(r => {
+      const sel = h('select', { 'aria-label': 'Result for ' + r.l.name, onchange: e => { r.st = e.target.value; draw(); } }, [['skip', 'Skip (no entry)'], ['perfect', '★ Perfect'], ['redo', '△ ○ Needs redo'], ['absent', 'Absent']].map(([v, t]) => h('option', { value: v, selected: r.st === v }, t)));
+      const num = (k, label) => h('label', { class: 'gnum' }, h('span', {}, label), h('input', { type: 'number', min: '0', max: '99', inputmode: 'numeric', value: String(r[k]), 'aria-label': label + ' for ' + r.l.name, oninput: e => { r[k] = Math.max(0, Number(e.target.value) || 0); } }));
+      list.append(h('div', { class: 'grow ' + r.st }, h('strong', {}, r.l.name), sel, r.st === 'redo' ? h('div', { class: 'gnums' }, num('tri', '△'), num('circ', '○')) : null));
+    });
+    const c = counts(); sum.textContent = c.perfect + ' perfect · ' + c.redo + ' need redo · ' + c.absent + ' absent · ' + c.skip + ' skipped';
+  };
+  const setAll = st => { rows.forEach(r => { r.st = st; }); draw(); };
+  const setSel = math ? h('label', { class: 'fld' }, h('span', {}, 'Worksheet set (ARAL Math)'), h('select', { id: 'gSet', onchange: e => { setG = Number(e.target.value); ws = guessWs(); showWs(); } }, [1, 2, 3, 4, 5, 6, 7, 9].map(g => h('option', { value: g, selected: g === setG }, g === 7 ? 'Grades 7 and 8' : g === 9 ? 'Grades 9 and 10' : 'Grade ' + g)))) : null;
+  const wsRow = h('div', { class: 'stepper' }, h('span', {}, 'Worksheet no.'), h('button', { class: 'btn', 'aria-label': 'Previous worksheet', onclick: () => { ws = Math.max(1, ws - 1); showWs(); } }, '−'), wsNum, h('button', { class: 'btn', 'aria-label': 'Next worksheet', onclick: () => { ws = Math.min(maxWs(), ws + 1); showWs(); } }, '+'));
+  showWs(); draw();
+  openSheet(h('div', { class: 'stack' }, h('h2', {}, 'Log the whole group'), h('p', { class: 'sub' }, (math ? 'Math' : 'Reading') + ' · ' + date + '. Same worksheet for everyone. Set the learners who need a redo or were absent.'),
+    setSel, wsRow, wsTitle, h('div', { class: 'two' }, h('button', { class: 'btn', id: 'gAllStar', onclick: () => setAll('perfect') }, '★ Everyone perfect'), h('button', { class: 'btn', onclick: () => setAll('skip') }, 'Clear all')), list, sum, msg,
+    h('button', { class: 'btn primary wide', id: 'gSave', onclick: () => {
+      msg.textContent = ''; const c = counts(); if (c.perfect + c.redo + c.absent === 0) { msg.textContent = 'Choose a result for at least one learner.'; return; }
+      if (rows.some(r => r.st === 'redo' && !r.tri && !r.circ)) { msg.textContent = 'For “Needs redo”, enter how many △ or ○ the learner has.'; return; }
+      let n = 0; rows.forEach(r => { if (r.st === 'skip') return; const ab = r.st === 'absent';
+        addOp('tracker', { entry_id: uid(), learner_id: r.l.id, tutor_id: P.session.tutor_id, date, domain: dom, worksheet: ab ? '' : ws, tri: ab || r.st === 'perfect' ? 0 : r.tri, circ: ab || r.st === 'perfect' ? 0 : r.circ, retries: 0, absent: ab ? 1 : 0, note: math ? 'set:G' + setG : '', created_at: new Date().toISOString() }); n++; });
+      closeSheet(); S.openRow = null; render(); toast(n + ' entries saved');
+    } }, 'Save for the group')));
 }
 
 /* ================= REPORT ================= */
