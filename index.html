@@ -138,6 +138,14 @@ table.mini{width:100%;border-collapse:collapse;font-size:14px}.mini th,.mini td{
 .shead{width:100%;border:0;background:transparent;display:flex;align-items:center;gap:12px;padding:12px;text-align:left;cursor:pointer}
 .spanel{padding:4px 12px 14px;display:flex;flex-direction:column;gap:10px;background:#F8FAFC;border-top:1px solid var(--line)}
 .wstitle{padding:8px 12px;border-left:4px solid var(--sea);background:var(--sea-l);border-radius:8px;font-weight:700;color:var(--sea-d)}
+.cnt{display:flex;justify-content:space-between;align-items:center}.timer{font-family:var(--disp);font-size:20px;color:var(--ink)}
+.rgrid{display:grid;gap:10px}.rgrid.row{grid-template-columns:repeat(3,1fr)}.rgrid.col{grid-template-columns:1fr}
+.rtile{position:relative;min-height:84px;border:2px solid var(--line);background:#fff;border-radius:16px;font-family:var(--disp);cursor:pointer;padding:10px;text-align:center;color:var(--ink)}
+.rtile.sm{font-size:46px}.rtile.wide{font-size:30px;text-align:left;padding:14px 56px 14px 16px;line-height:1.2}
+.rtile .tick{position:absolute;right:10px;top:10px;width:30px;height:30px;border-radius:50%;background:var(--leaf);color:#fff;font-size:17px;display:none;place-items:center}
+.rtile.on{border-color:var(--leaf);background:var(--leaf-l)}.rtile.on .tick{display:grid}.rtile.sug{border-style:dashed;border-color:var(--sea)}
+.rtile .ans{display:block;font-family:var(--body);font-size:14px;color:var(--ink2);margin-top:4px}
+.passage.small{font-size:17px;line-height:1.55;padding:12px}
 .stat{padding:10px 12px;border-radius:10px;font-weight:700;text-align:center}.stat.perfect{background:var(--sun-l);color:#7A5600}.stat.redo{background:var(--coral-l);color:var(--coral)}
 
 /* report */
@@ -166,6 +174,7 @@ input.answer{border:2px solid var(--sea);font-family:var(--disp);font-size:36px;
 /* Laptop and desktop: side menu, wider pages, centred dialogs, typing instead of the on-screen keypad */
 @media (min-width:900px){
   :root{--hdr:62px}
+  .rtile.sm{font-size:60px}.rtile.wide{font-size:36px}
   body{font-size:17px}
   .top{padding-left:28px;padding-right:28px}
   .bar{top:var(--hdr);bottom:0;right:auto;width:220px;flex-direction:column;justify-content:flex-start;gap:4px;padding:16px 10px;border-top:0;border-right:1px solid var(--line)}
@@ -502,73 +511,84 @@ function isCorrect(item, ans) {
 }
 if (typeof module !== 'undefined') module.exports = { genNumeracy, isCorrect, parseVal, BLUEPRINT, mkR, hashStr };
 
-/* ================= READING LADDER ================= */
-const READ_LEVELS = [
-  { lv: 1, name: 'Words', need: 8, n: 10 },
-  { lv: 2, name: 'Word sets', need: 4, n: 5 },
-  { lv: 3, name: 'Phrases', need: 4, n: 5 },
-  { lv: 4, name: 'Sentences', need: 4, n: 5 },
-  { lv: 5, name: 'Paragraph', need: 0, n: 1 }
+/* ================= READING: ARAL-Reading Key Stage 1 style check-in ================= */
+/* Six tasks, read one learner at a time, like the Progress Check-in tool in the Tutor's Guide:
+   1 letters, 2 syllables, 3 words, 4 phrases, 5 sentences, 6 questions about the sentences.
+   An optional 7th task (a short paragraph) is offered for stronger readers. All items below are original. */
+const KS1_TASKS = [
+  { id: 1, key: 'letters', name: 'Letters', n: 6 },
+  { id: 2, key: 'syllables', name: 'Syllables', n: 6 },
+  { id: 3, key: 'words', name: 'Words', n: 6 },
+  { id: 4, key: 'phrases', name: 'Phrases', n: 4 },
+  { id: 5, key: 'sentences', name: 'Sentences', n: 2 },
+  { id: 6, key: 'questions', name: 'Questions', n: 2 }
 ];
-const PARA_PASS = 0.9; // accuracy needed to pass the paragraph level
-const READING = {
+const KS1_TOTAL = KS1_TASKS.reduce((a, t) => a + t.n, 0); // 26 items
+const PARA_PASS = 0.9; // accuracy needed to pass the optional paragraph
+const passNeed = n => Math.max(1, Math.round(n * 0.8));
+const KS1 = {
   en: {
     label: 'English', mic: 'en-PH',
+    say: {
+      letters: 'Say the name and the sound of each letter.', syllables: 'Read each syllable.', words: 'Read each word.',
+      phrases: 'Read each phrase.', sentences: 'Read each sentence.', questions: 'Ask each question. The learner answers in any language.'
+    },
     A: {
-      1: ['cat', 'sit', 'hop', 'bug', 'red', 'pen', 'map', 'cup', 'dog', 'fin'],
-      2: ['cat bat mat', 'sit hit pit', 'hop top mop', 'bug rug mug', 'red bed fed'],
-      3: ['a big cat', 'the red hat', 'sit on a mat', 'a hot pan', 'run to the sun'],
-      4: ['The cat sat on the mat.', 'Ben has a red hat.', 'The dog can run fast.', 'Mom put the pan on the stove.', 'We play in the yard after school.'],
-      5: ['Lina and her brother Ben go to the market every Saturday. They buy fish, rice, and fresh vegetables for the family. Ben carries the heavy bag while Lina holds the money. After shopping, they walk home and help Mother cook lunch.']
+      letters: ['t', 'A', 'S', 'n', 'B', 'g'],
+      syllables: ['pa', 'ne', 'it', 'ob', 'su', 'la'],
+      words: ['sat', 'pen', 'tip', 'hot', 'bud', 'fan'],
+      phrases: ['a red hat', 'sit on a mat', 'tap the pan', 'a big hen'],
+      sentences: ['Sam sat on the mat.', 'The pig is in the mud.'],
+      questions: [['Who sat on the mat?', 'Sam'], ['Where is the pig?', 'in the mud']],
+      paragraph: 'Lina and her brother Ben go to the market every Saturday. They buy fish, rice, and fresh vegetables for the family. Ben carries the heavy bag while Lina holds the money. After shopping, they walk home and help Mother cook lunch.'
     },
     B: {
-      1: ['bat', 'pin', 'mop', 'rug', 'bed', 'hen', 'cap', 'sun', 'log', 'jam'],
-      2: ['can fan pan', 'big dig pig', 'hot pot dot', 'sun bun run', 'net pet wet'],
-      3: ['a fat hen', 'the wet dog', 'hop on a log', 'a red cup', 'jump in the mud'],
-      4: ['The hen is in the pen.', 'Sam has a big bag.', 'The pig sat in the mud.', 'Dad made a hot meal.', 'We help at home every day.'],
-      5: ['Tony lives near the sea. Every morning he helps his father push the small boat into the water. They catch many fish before the sun gets hot. Then Tony carries the basket of fish to the market and sells them to the buyers.']
+      letters: ['m', 'E', 's', 'P', 'd', 'L'],
+      syllables: ['ta', 'me', 'is', 'op', 'nu', 'ba'],
+      words: ['map', 'net', 'sip', 'pot', 'mud', 'hat'],
+      phrases: ['a hot pot', 'nap on a bed', 'pat the dog', 'a fat cat'],
+      sentences: ['Tom has a red cap.', 'The hen is on the bed.'],
+      questions: [['What does Tom have?', 'a red cap'], ['Where is the hen?', 'on the bed']],
+      paragraph: 'Tony lives near the sea. Every morning he helps his father push the small boat into the water. They catch many fish before the sun gets hot. Then Tony carries the basket of fish to the market and sells them to the buyers.'
     }
   },
   fil: {
     label: 'Filipino', mic: 'fil-PH',
+    say: {
+      letters: 'Ibigay ang pangalan at tunog ng titik.', syllables: 'Basahin ang mga pantig.', words: 'Basahin ang mga salita.',
+      phrases: 'Basahin ang mga parirala.', sentences: 'Basahin ang mga pangungusap.', questions: 'Itanong ang bawat tanong. Maaaring sumagot ang bata sa anumang wika.'
+    },
     A: {
-      1: ['bata', 'mata', 'kama', 'bola', 'sako', 'tela', 'mani', 'pako', 'lata', 'bibe'],
-      2: ['mama papa lola', 'bata bola mata', 'aso pusa daga', 'kama mesa upuan', 'araw ulan ulap'],
-      3: ['ang malaking aso', 'ang pulang bola', 'may bata sa bahay', 'si nanay at si tatay', 'ang masarap na saging'],
-      4: ['Si Ana ay may bagong lapis.', 'Masarap ang luto ni Nanay.', 'Naglalaro ang mga bata sa bakuran.', 'Maagang gumising si Tatay para mangisda.', 'Tumulong kami sa paglilinis ng bahay.'],
-      5: ['Tuwing Sabado, sumasama si Lina sa kanyang lola sa palengke. Bumibili sila ng isda, gulay, at prutas. Pagkauwi, tinutulungan ni Lina si Lola sa pagluluto ng tanghalian. Masaya silang kumakain nang sabay-sabay.']
+      letters: ['k', 'A', 'b', 'I', 'l', 'n'],
+      syllables: ['ba', 'ki', 'lo', 'as', 'um', 'te'],
+      words: ['bata', 'kama', 'mesa', 'tubo', 'bola', 'lupa'],
+      phrases: ['ang bata', 'may bola', 'si Nena at si Ben', 'kain tayo'],
+      sentences: ['Si Ana ay may bola.', 'Ang aso ay nasa bahay.'],
+      questions: [['Sino ang may bola?', 'Si Ana'], ['Nasaan ang aso?', 'sa bahay']],
+      paragraph: 'Tuwing Sabado, sumasama si Lina sa kanyang lola sa palengke. Bumibili sila ng isda, gulay, at prutas. Pagkauwi, tinutulungan ni Lina si Lola sa pagluluto ng tanghalian. Masaya silang kumakain nang sabay-sabay.'
     },
     B: {
-      1: ['baso', 'lupa', 'mesa', 'sapa', 'tubo', 'gamot', 'pala', 'wawa', 'kuya', 'dila'],
-      2: ['tatay nanay ate', 'gata mani saging', 'bahay pinto bintana', 'lapis papel pambura', 'isda hipon alimango'],
-      3: ['ang maliit na pusa', 'ang bagong lapis', 'may isda sa ilog', 'si ate at si kuya', 'ang mabangong bulaklak'],
-      4: ['Ang aso ay tumatahol sa gabi.', 'May malaking puno sa tabi ng paaralan.', 'Nagbasa ng aklat si Lito.', 'Bumili si Nanay ng isda sa palengke.', 'Masaya kaming kumain nang sabay-sabay.'],
-      5: ['Malapit sa dagat ang bahay nina Tony. Tuwing umaga, tinutulungan niya ang kanyang tatay na itulak ang bangka. Marami silang nahuhuling isda bago uminit ang araw. Dinadala ni Tony ang mga isda sa palengke para ibenta.']
+      letters: ['p', 'E', 't', 'U', 'g', 'd'],
+      syllables: ['pa', 'ti', 'ko', 'is', 'ul', 'be'],
+      words: ['pato', 'tela', 'sako', 'baso', 'laro', 'mata'],
+      phrases: ['ang pusa', 'may baso', 'si Lito at si Ana', 'laro tayo'],
+      sentences: ['Si Ben ay may lapis.', 'Ang pusa ay nasa kama.'],
+      questions: [['Sino ang may lapis?', 'Si Ben'], ['Nasaan ang pusa?', 'sa kama']],
+      paragraph: 'Malapit sa dagat ang bahay nina Tony. Tuwing umaga, tinutulungan niya ang kanyang tatay na itulak ang bangka. Marami silang nahuhuling isda bago uminit ang araw. Dinadala ni Tony ang mga isda sa palengke para ibenta.'
     }
   }
 };
-const READ_FORM = { A: 'A', B: 'B' };
 const wordCount = s => s.trim().split(/\s+/).filter(Boolean).length;
-const defaultStartLevel = grade => (grade <= 1 ? 1 : grade === 2 ? 2 : grade === 3 ? 3 : 4);
 
-/* Level result -> {pass:boolean}. marks = array of 1/0 for levels 1-4; for level 5 pass miscues & words */
-function levelPassed(lv, marks, words, miscues) {
-  if (lv === 5) { if (!words) return false; return (words - miscues) / words >= PARA_PASS; }
-  const need = READ_LEVELS[lv - 1].need; const ok = marks.reduce((a, b) => a + (b ? 1 : 0), 0); return ok >= need;
+/* marks = { 1:[0/1...], ..., 6:[...] } -> totals and the highest task mastered in a row */
+function scoreReading(marks) {
+  let raw = 0; let level = 0; let streak = true; const per = {};
+  KS1_TASKS.forEach(t => {
+    const ok = (marks[t.id] || []).reduce((a, b) => a + (b ? 1 : 0), 0); per[t.id] = ok; raw += ok;
+    if (streak && ok >= passNeed(t.n)) level++; else streak = false;
+  });
+  return { raw, total: KS1_TOTAL, pct: Math.round(raw / KS1_TOTAL * 1000) / 10, level, per };
 }
-/* Decide next level to test, given what has been passed/failed so far. returns null when finished */
-function nextReadingLevel(done) {
-  // done = { [lv]: true/false }
-  const lvls = Object.keys(done).map(Number).sort((a, b) => a - b);
-  const last = done.__last;
-  if (last == null) return null;
-  const passedHi = Math.max(0, ...lvls.filter(l => done[l] === true));
-  const failedLo = Math.min(99, ...lvls.filter(l => done[l] === false));
-  if (done[last] === true) { const nx = last + 1; if (nx > 5 || done[nx] !== undefined) return null; return nx; }
-  const nx = last - 1; if (nx < 1 || done[nx] !== undefined) return null; return nx;
-}
-function finalReadingLevel(done) { const p = Object.keys(done).filter(k => k !== '__last' && done[k] === true).map(Number); return p.length ? Math.max.apply(null, p) : 0; }
-
 /* Loose matching of what the microphone heard against the target text */
 function normTxt(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim(); }
 function micSuggest(target, heard) {
@@ -578,7 +598,70 @@ function micSuggest(target, heard) {
   t.forEach(w => { const i = pool.indexOf(w); if (i >= 0) { hit++; pool.splice(i, 1); } });
   return hit / t.length >= (t.length === 1 ? 1 : 0.8) ? 1 : 0;
 }
-if (typeof module !== 'undefined') module.exports = { READING, READ_LEVELS, levelPassed, nextReadingLevel, finalReadingLevel, micSuggest, wordCount };
+
+/* ================= READING: passage and questions (ARAL-Reading Plus style) ================= */
+/* The learner reads a short passage aloud (accuracy and words per minute), then answers four questions:
+   a detail, a word meaning, a cause and effect, and a conclusion about the character. All passages are original. */
+const PLUS = {
+  en: {
+    A: {
+      title: 'The Gray Sky',
+      text: 'Dino lives in a small village by the sea. Every Saturday, his grandfather takes him fishing in a wooden boat. One morning, the sky turned gray and the wind grew strong. Grandfather said they must go home at once. Dino was disappointed because he had not caught a single fish. On the way back, they saw other fishermen pulling their boats onto the sand. That evening, a heavy storm hit the village. Dino was glad that they had listened to Grandfather and returned early.',
+      qs: [['What did Dino and his grandfather do every Saturday?', 'They went fishing in a wooden boat.', 'Detail'], ['What does the word “disappointed” mean in this story?', 'Sad because he did not get what he wanted.', 'Word meaning'], ['Why did Grandfather say they must go home at once?', 'The sky turned gray and the wind grew strong (a storm was coming).', 'Cause and effect'], ['What kind of person is Grandfather? Give a reason from the story.', 'Careful or caring or wise; he took them home before the storm.', 'Conclusion']]
+    },
+    B: {
+      title: 'Mara’s Garden',
+      text: 'Mara planted a small garden behind her house. She watered the tomatoes every morning and pulled out the weeds after school. After two months, red tomatoes grew on the plants. Mara picked the ripe ones and gave some to her neighbor, who was sick. Her neighbor smiled and thanked her. Mara felt happy because her hard work had helped someone. The next day, she planted more seeds so that she could share again.',
+      qs: [['What did Mara do every morning?', 'She watered the tomatoes.', 'Detail'], ['What does the word “ripe” mean in this story?', 'Ready to be picked or eaten.', 'Word meaning'], ['Why did Mara give tomatoes to her neighbor?', 'The neighbor was sick.', 'Cause and effect'], ['What kind of person is Mara? Give a reason from the story.', 'Kind or hardworking or generous; she shared and planted more to share again.', 'Conclusion']]
+    }
+  },
+  fil: {
+    A: {
+      title: 'Ang Bagong Aklat',
+      text: 'Binigyan si Lito ng bagong aklat ng kanyang guro dahil siya ang pinakamasipag magbasa sa klase. Tuwing hapon, binabasa niya ito sa ilalim ng puno ng mangga. Isang araw, ibinahagi niya ang aklat sa kapitbahay niyang si Ana na hindi pa marunong magbasa. Tinuruan niya itong kilalanin ang mga titik at salita. Nang makabasa si Ana ng isang pangungusap, tuwang-tuwa si Lito. Alam niyang mas masaya pala kapag may kasamang natututo.',
+      qs: [['Bakit binigyan si Lito ng bagong aklat?', 'Siya ang pinakamasipag magbasa sa klase.', 'Detalye'], ['Ano ang ibig sabihin ng “ibinahagi” sa kuwento?', 'Ibinigay o ipinagamit sa iba (shared).', 'Kahulugan ng salita'], ['Bakit tuwang-tuwa si Lito?', 'Nakabasa si Ana ng isang pangungusap.', 'Sanhi at bunga'], ['Anong uri ng bata si Lito? Magbigay ng patunay mula sa kuwento.', 'Mabait o matulungin o masipag; tinuruan niya si Ana.', 'Konklusyon']]
+    },
+    B: {
+      title: 'Ang Sagwan',
+      text: 'Si Mang Isko ay mangingisda sa aming baryo. Tuwing madaling-araw, sumasakay siya sa kanyang maliit na bangka upang manghuli ng isda. Isang umaga, nasira ang kanyang sagwan. Hindi siya nakapangisda kaya wala silang ulam sa tanghalian. Tinulungan siya ng mga kapitbahay na gumawa ng bagong sagwan. Nagpasalamat si Mang Isko at nangakong tutulong din sa iba kapag kailangan nila.',
+      qs: [['Ano ang ginagawa ni Mang Isko tuwing madaling-araw?', 'Nangingisda siya sa kanyang bangka.', 'Detalye'], ['Ano ang ibig sabihin ng “nangako”?', 'Nagsabing gagawin ang isang bagay (promised).', 'Kahulugan ng salita'], ['Bakit walang ulam sa tanghalian?', 'Nasira ang sagwan kaya hindi siya nakapangisda.', 'Sanhi at bunga'], ['Anong uri ng mga kapitbahay ni Mang Isko? Bakit mo nasabi?', 'Matulungin; tinulungan nila siyang gumawa ng bagong sagwan.', 'Konklusyon']]
+    }
+  }
+};
+
+/* Junior high passages (Key Stage 3 Plus style): word meaning from context, a conclusion, the author's purpose, and fact versus opinion. All original. */
+const PLUS3 = {
+  en: {
+    A: {
+      title: 'The Plastic Problem',
+      text: 'Every morning, the shoreline of Barangay Dalampasigan is covered with plastic bottles, wrappers, and torn fishing nets. Volunteers collect tons of garbage each month, yet more waste washes ashore after every storm. Scientists say that plastic takes hundreds of years to break down, and tiny fragments are now found inside fish that families eat. Clearly, our town should ban single-use plastic bags immediately. Some store owners argue that the ban would be costly, but a nearby town that adopted it saw 40 percent less litter within a year. If we want a healthy sea and a safe food supply, we must act now.',
+      qs: [['What does the word “fragments” mean in this passage?', 'Small broken pieces.', 'Word meaning from context'], ['How could plastic in the sea affect the families in the town?', 'Tiny pieces of plastic are inside the fish they eat, which can harm their health.', 'Conclusion'], ['What is the author’s main purpose in writing this passage?', 'To persuade readers to ban single-use plastic bags.', 'Author’s purpose'], ['Name one sentence in the passage that is an opinion, not a fact.', 'Clearly, our town should ban single-use plastic bags immediately. (Also accept: we must act now.)', 'Fact or opinion']]
+    },
+    B: {
+      title: 'Why Sleep Matters',
+      text: 'Many students stay up late to finish homework or play online, but sleep experts warn that this habit is harmful. During sleep, the brain stores what a person learned during the day. Teenagers who sleep fewer than seven hours often forget lessons quickly and feel irritable in class. One school in Iloilo moved its first class from 6:30 to 8:00 in the morning, and its failing grades dropped by a third. Obviously, all schools should start later. Parents, too, can help by switching off the television and phones at nine o’clock so that children can rest.',
+      qs: [['What does the word “irritable” mean in this passage?', 'Easily annoyed or cranky.', 'Word meaning from context'], ['Why might the school in Iloilo have had fewer failing grades after the change?', 'Students got more sleep, so they remembered lessons and felt better in class.', 'Conclusion'], ['What is the author’s main purpose in writing this passage?', 'To persuade schools and parents to let students get more sleep.', 'Author’s purpose'], ['Name one sentence in the passage that is an opinion, not a fact.', 'Obviously, all schools should start later.', 'Fact or opinion']]
+    }
+  },
+  fil: {
+    A: {
+      title: 'Ang Palengke sa Aming Bayan',
+      text: 'Tuwing Linggo, dinadayo ng mga tao ang palengke sa aming bayan. Sariwa ang mga isda at gulay na ibinebenta roon dahil galing mismo sa mga mangingisda at magsasaka ng karatig-baryo. Ayon sa isang pag-aaral, mas mura ng sampung porsyento ang mga produktong lokal kaysa sa dinadala mula sa ibang lalawigan. Walang duda, ito ang pinakamasarap na isda sa buong rehiyon. Kapag bumibili tayo sa mga lokal na nagtitinda, tinutulungan natin silang magkaroon ng kabuhayan. Kaya dapat nating suportahan ang ating mga kababayan.',
+      qs: [['Ano ang ibig sabihin ng “karatig-baryo” sa talata?', 'Kalapit na baryo.', 'Kahulugan mula sa konteksto'], ['Bakit kaya dinadayo ng mga tao ang palengke?', 'Sariwa at mura ang mga paninda.', 'Konklusyon'], ['Ano ang layunin ng sumulat?', 'Hikayatin ang mga mambabasa na suportahan ang mga lokal na nagtitinda.', 'Layunin ng may-akda'], ['Magbigay ng isang pangungusap sa talata na opinyon, hindi katotohanan.', 'Walang duda, ito ang pinakamasarap na isda sa buong rehiyon.', 'Katotohanan o opinyon']]
+    },
+    B: {
+      title: 'Ang Kapangyarihan ng Pagbabasa',
+      text: 'Maraming kabataan ang gumugugol ng tatlong oras sa social media araw-araw, ngunit kakaunti ang naglalaan ng kahit sampung minuto sa pagbabasa. Ayon sa isang paaralan sa Romblon, tumaas ang marka sa Filipino ng mga mag-aaral na nagbabasa nang labinlimang minuto bawat gabi. Walang kapantay ang saya ng isang magandang aklat. Hindi kailangang mahal ang babasahin; maaari kang manghiram sa aklatan ng paaralan o ng barangay. Kung nais nating gumaling sa pag-aaral, simulan natin ngayon ang pagbabasa.',
+      qs: [['Ano ang ibig sabihin ng “naglalaan” sa talata?', 'Nagtatabi o nagbibigay ng oras.', 'Kahulugan mula sa konteksto'], ['Bakit kaya tumaas ang marka ng mga mag-aaral na nagbabasa gabi-gabi?', 'Nasanay silang magbasa at gumaling sila sa wika at pag-unawa.', 'Konklusyon'], ['Ano ang layunin ng sumulat?', 'Hikayatin ang mga kabataan na magbasa araw-araw.', 'Layunin ng may-akda'], ['Magbigay ng isang pangungusap sa talata na opinyon, hindi katotohanan.', 'Walang kapantay ang saya ng isang magandang aklat.', 'Katotohanan o opinyon']]
+    }
+  }
+};
+/* accuracy% and comprehension% count equally; words per minute is recorded on its own */
+function scorePassage(words, miscues, secs, correct) {
+  const acc = Math.max(0, Math.min(100, (words - miscues) / words * 100)); const comp = correct / 4 * 100;
+  return { acc: Math.round(acc * 10) / 10, comp: Math.round(comp * 10) / 10, pct: Math.round((acc * 0.5 + comp * 0.5) * 10) / 10, wcpm: secs > 0 ? Math.round((words - miscues) / (secs / 60)) : 0 };
+}
+if (typeof module !== 'undefined') module.exports = { PLUS, PLUS3, scorePassage, KS1, KS1_TASKS, KS1_TOTAL, passNeed, scoreReading, micSuggest, wordCount };
 
 const WS_TITLES = {"1": ["", "Counting Objects", "Drawing the Number of Objects", "Matching Numbers to Objects", "Counting Objects and Writing Numbers in Words", "Missing Numbers", "Ordinal Numbers", "Illustrating Addition", "Naming Shapes: Circle, Square, Rectangle, and Triangle", "Comparing Shapes", "Patterns", "Days of the Week", "Order of Months and Days", "The Calendar", "Reading a Calendar", "Finding the Sum (+1)", "Finding the Sum (+2, +3)", "Finding the Sum (+3, +4)", "Finding the Sum (+4, +5)", "Finding the Sum (+5, +6)", "Finding the Sum (+6, +7)", "Finding the Sum (+7, +8)", "Finding the Sum (+8, +9)", "Finding the Sum (mixed)", "Writing Numbers in Words", "Writing Words into Numbers", "Fractions: ½ and ¼", "Naming Fractions", "Shading Fractions", "Comparing Sets"], "2": ["", "Counting Objects", "Drawing the Number of Objects", "Matching Numbers to Objects", "Counting Objects and Writing Numbers in Words", "Writing Numbers in Words", "Writing Words into Numbers", "Comparing Numbers", "Arranging Numbers in Increasing Order", "Comparing Numbers and Arranging Numbers in Increasing Order", "Arranging Numbers in Decreasing Order", "Comparing Numbers and Arranging Numbers in Decreasing Order", "Missing Numbers", "Ordinal Numbers", "Fractions: ½ and ¼", "Naming Fractions", "Shading Fractions", "Illustrating Addition", "Addition of 1-Digit by 1-Digit", "Addition of 1-Digit by 1-Digit by 1-Digit", "Addition of 2-Digit by 1-Digit without Regrouping", "Addition of 2-Digit by 1-Digit with Regrouping", "Addition of 2-Digit Numbers without Regrouping", "Addition of 2-Digit Numbers with Regrouping", "Illustrating Subtraction", "Parts of the Subtraction", "Subtraction of 2-Digit by 1-Digit without Regrouping", "Subtraction of 2-Digit by 1-Digit with Regrouping", "Subtraction of 2-Digit Numbers without Regrouping", "Subtraction of 2-Digit Numbers with Regrouping", "Naming Shapes: Circle, Square, Rectangle, and Triangle", "Comparing Shapes", "Patterns", "Days of the Week", "Order of Months and Days", "The Calendar", "Reading a Calendar"], "3": ["", "Place Values", "Reading and Writing Numbers", "Writing Numbers in Expanded Form", "Comparing and Ordering Numbers", "Missing Terms in Patterns", "Missing Terms in Patterns", "Missing Terms in Patterns", "Comparing and Arranging Fractions", "Addition of 2-digit and 3-digit Numbers", "Addition of 3-digit Numbers", "Word Problems on Addition", "Subtraction of 2-digit and 3-digit Numbers", "Word Problems on Subtraction", "Understanding Multiplication", "Properties of Multiplication", "Multiplication by 2, 3, 4, 5, and 10", "Understanding Division", "Division by 2, 3, 4, 5, and 10", "Word Problems on Division", "Half Circles and Quarter Circles", "Naming Shapes: Circle, Square, Rectangle, and Triangle", "Geometric Patterns", "Geometric Patterns", "Geometric Visualization"], "4": ["", "Odd and Even Numbers", "Comparing Fractions", "Ordering Fractions Ascending Order", "Fractions Equal or Greater than One", "Reading and Writing Fractions", "Arranging Numbers in Decreasing Order", "Addition of 3- to 4-digit Whole Number without and with Regrouping", "Addition of 2- to 4-digit Whole Number without and with Regrouping and Solving Word Problem in Addition", "Subtraction of 3- to 4-digit Whole Number with and without Regrouping", "Solving Word Problem in Subtraction", "Multiplication of 2- to 3-digit Whole Number by 1-digit Number without or with Regrouping", "Multiplication of 2-digit Whole Number by 2- digit numbers with Regrouping", "Multiplication of 2- to 3-digit Whole Numbers by Multiples of 10 and 100", "Solving Word Problem in Multiplication", "Division of Numbers up to 100 by 6, 7, 8, and 9 (Multiplication Table of 6, 7, 8, and 9)", "Division Facts of Numbers up to 10", "Division of 2-digit Whole Number by 1-digit Whole Number without or with remainder", "Division of 2- to 3-digit Whole Number by 1-digit Whole Number with remainder", "Division of 2-digit Whole Number by 2-digit Whole Number without and with remainder", "Division of 2- to 3-digit Whole Number by 10 and 100", "Point, Line, Line Segment, and Ray", "Parallel, Intersecting, and Perpendicular Lines", "Congruent Line Segment I.", "Visualizing Numbers", "Visualizing Numbers", "Finding the Value and Place Value of a Digit", "Determining the Value of a Digit based on Place Value", "Determining the Value of a Digit based on Place Value and Vice Versa", "Writing Numbers in Words and Vice Versa", "Comparing Numbers Using Relation Symbols", "Rounding Off to a Specific Place Value", "Rounding Off to a Specific Place Value", "Ordering Numbers in Increasing or Decreasing Order", "Ordering Numbers in Increasing or Decreasing Order"], "5": ["", "Visualizing Numbers", "Visualizing Numbers", "Finding the Value and Place Value of a Digit", "Determining the Value of a Digit based on Place Value", "Determining the Value of a Digit based on Place Value and Vice Versa", "Writing Numbers in Words and Vice Versa", "Comparing Numbers Using Relation Symbols", "Rounding Off to a Specific Place Value", "Rounding Off to a Specific Place Value", "Ordering Numbers in Increasing or Decreasing Order", "Ordering Numbers in Increasing or Decreasing Order", "Multiplying Numbers up to Thousands", "Multiplying Numbers up to Thousands and Solving Word Problems Involving Multiplication", "Estimating Products and Solving Word Problems Involving Multiplication", "Estimating Products and Solving Word Problems Involving Multiplication", "Multiplying Mentally", "Multiplying Mentally", "Division", "Division", "Dividing Mentally by Tens, Hundreds, or Thousands", "Dividing Mentally by Tens, Hundreds, or Thousands", "Estimating Quotients", "Division of Whole Numbers", "Division of Whole Numbers", "Estimating Quotient", "Solving Multi-Step Problems Involving Division and Other Operations", "Solving Multi-Step Problems Involving Division and Other Operations", "Order of Operations", "Order of Operations", "Kinds of Angles", "Kinds of Angles", "Kinds of Angles"], "6": ["", "Divisibility Rules", "Divisibility Rules", "Divisibility Rules", "Divisibility Rules", "Order of Operations", "Order of Operations", "Order of Operations", "Order of Operations", "Greatest Common Factor (GCF)", "Least Common Multiple (LCM)", "GCF and LCM", "GCF and LCM", "GCF and LCM", "Multiplication of Fractions", "Multiplication of Fractions", "Multiplication of Whole Numbers, Fractions, and Mixed Numbers", "Multiplication of Fractions", "Multiplication of Fractions", "Division of Fractions", "Division of Fractions", "Division of Fractions", "Division of Fractions", "Division of Fractions", "Division of Fractions", "Polygons", "Polygons", "12- and 24-hour Clock System", "Reading Clocks and Converting to 24-Hour Time", "Reading Clocks and Converting to 24-Hour Time", "Area of a Triangle", "Area of Trapezoid and Area of Parallelogram", "Area of Trapezoid and Area of Parallelogram", "Temperature", "Temperature", "Temperature"], "7": ["", "Adding Similar Fractions", "Subtracting Similar Fractions", "Adding and Subtracting Mixed Numbers", "Adding and Subtracting Mixed Numbers", "Adding and Subtracting Similar Fractions", "Adding and Subtracting Dissimilar Fractions", "Adding and Subtracting Dissimilar Fractions", "Word Problems on Adding and Subtracting Fractions", "Multiplying Fractions", "Multiplying Mixed Numbers", "Multiplying Mixed Numbers", "Dividing Fractions", "Dividing Mixed Numbers", "Adding Decimals", "Adding Decimals", "Subtracting Decimals", "Subtracting Decimals", "Adding and Subtracting Decimals (Word Phrases)", "Multiplying Decimals", "Multiplying Decimals", "Dividing Decimals", "Dividing Whole Numbers by Decimals", "Division by 0.1, 0.01, and 0.001", "Division by 0.1, 0.01, and 0.001 (continued)", "Division by 10, 100, and 1,000", "Division by 10, 100, and 1,000", "Solid Figures", "Cubes", "Triangular Prisms", "Pyramids", "Cylinders", "Cones", "Spheres", "Differentiating Solid and Plane Figures", "Differentiating Speed, Distance, Time", "Calculating Speed, Distance, Time", "Calculating Speed, Distance, Time", "Area of Composite Figures", "Area of Composite Figures", "Area of Composite Figures", "Surface Area of a Rectangular Prism", "Surface Area of a Triangular Prism", "Surface Area of a Cube and a Square Pyramid", "Surface Area of a Cube and Square Pyramid", "Surface Area of a Cylinder", "Surface Area of a Cone and Other Solid Figures", "Surface Area of a Sphere and Other Solid Figures", "Listing Outcomes", "Listing Outcomes", "Listing Outcomes", "Listing Outcomes", "Adding Two Positive Integers; Adding Two Positive Similar Fractions", "Adding Two Negative Integers; Adding Two Negative Similar Fractions", "Adding a Positive and a Negative Integer; Adding a Positive and Negative Fraction", "Adding a Positive and a Negative Integer", "Subtracting Two Positive Integers", "Subtracting Two Negative Integers", "Subtracting a Positive Integer by a Negative Integer", "Subtracting a Negative Integer by a Positive Integer; Subtracting a Negative Fraction by a Positive Fraction", "Subtracting Integers", "Multiplying Two Positive Integers; Multiplying Two Positive Fractions", "Multiplying Two Negative Integers; Multiplying Two Negative Fractions", "Multiplying Two Integers with Different Signs; Multiplying Fractions with Different Signs", "Multiplying Integers", "Division of Two Positive Integers; Division of Two Negative Integers", "Division of Two Integers with Different Signs", "Dividing Integers"], "9": ["", "Adding Two Positive Integers; Adding Two Positive Similar Fractions", "Adding Two Negative Integers; Adding Two Negative Similar Fractions", "Adding a Positive and a Negative Integer; Adding a Positive and Negative Fraction", "Adding a Positive and a Negative Integer", "Subtracting Two Positive Integers", "Subtracting Two Negative Integers", "Subtracting a Positive Integer by a Negative Integer", "Subtracting a Negative Integer by a Positive Integer; Subtracting a Negative Fraction by a Positive Fraction", "Subtracting Integers", "Multiplying Two Positive Integers; Multiplying Two Positive Fractions", "Multiplying Two Negative Integers; Multiplying Two Negative Fractions", "Multiplying Two Integers with Different Signs; Multiplying Fractions with Different Signs", "Multiplying Integers", "Division of Two Positive Integers; Division of Two Negative Integers", "Division of Two Integers with Different Signs", "Dividing Integers", "Performing Series of Operations Involving Fractions and Integers", "Multiplying Decimals and Fractions", "Dividing Decimals and Fractions", "Performing Operations Involving Three Fractions and Decimals", "Performing Operations Involving Three Fractions and Decimals", "Performing Operations Involving Three Fractions and Decimals", "Performing Operations Involving Four Fractions and Decimals", "Performing Operations Involving Four Fractions and Decimals", "Order of Operations", "Evaluating Exponents & Expressing Numbers in Exponential Notation with a Given Base", "Laws of Exponents", "Evaluating Expressions Using the Laws of Exponents", "Product Law and Quotient Law", "Power of Powers Law and Power of Different Bases Law", "Powers of Different Bases Law and Other Laws of Exponents", "Laws of Exponents", "Square Roots", "Translating Expressions into Symbols and Vice Versa", "Evaluating Algebraic Expressions", "Adding Polynomials", "Special Cases on Adding Polynomials", "Subtracting Polynomials", "Polynomial Operations and Functions", "Multiplying Polynomials", "Multiplying Polynomials", "Multiplying Polynomials", "Dividing Polynomials", "Multiplication and Division of Polynomials", "Multiplication and Division of Polynomials", "Linear Equations", "Inequalities", "Solving Inequalities", "Graphing and Solving Inequalities", "Factoring by GCF", "Factoring the Trinomial", "Factoring by Grouping, Word Problems with Factoring", "Factoring the Difference of Two Cubes", "Factoring the Difference of Two Cubes", "Factoring the Sum and Difference of Two Cubes", "Factoring using Various Methods", "Factoring using various methods, Word Problems on Factoring"]};
 
@@ -948,7 +1031,7 @@ function setKey(fn) { if (KEYH) document.removeEventListener('keydown', KEYH); K
 function closeTest() { setKey(null); const t = $('#test'); t.hidden = true; t.innerHTML = ''; if ($('#sheet').hidden) document.body.classList.remove('noscroll'); render(); }
 
 function resultsFor(lid) { const out = {}; Object.values(D().results).forEach(r => { if (r.learner_id === lid) (out[r.domain] = out[r.domain] || {})[r.phase] = r; }); return out; }
-function resLine(r) { if (!r) return '—'; return r.domain === 'numeracy' ? r.raw + '/' + r.total + ' (' + Math.round(r.pct) + '%)' : 'Level ' + r.reading_level + ' of 5'; }
+function resLine(r) { if (!r) return '—'; if (r.mode === 'passage') return Math.round(r.pct) + '% (passage, ' + r.raw + '/4 questions)'; return r.raw + '/' + r.total + ' (' + Math.round(r.pct) + '%)' + (r.domain === 'numeracy' ? '' : ' · Task ' + (r.reading_level || 0)); }
 
 function sheetLearner(id) {
   const l = learnerById(id); if (!l) return; const R = resultsFor(id);
@@ -1071,66 +1154,137 @@ function finishNumeracy(T) {
   openTest(wrap);
 }
 
-/* ================= READING TEST ================= */
+/* ================= READING TEST (check-in tool) ================= */
 function sheetReadLaunch(id) {
-  const l = learnerById(id); const phase = S.phase; let lang = 'en';
+  const l = learnerById(id); const phase = S.phase; let lang = 'en'; let tool = Number(l.grade) >= 4 ? 'passage' : 'checkin';
   const lb = h('div', { class: 'seg' }, [['en', 'English'], ['fil', 'Filipino']].map(([k, t]) => h('button', { class: k === lang ? 'on' : '', onclick: e => { lang = k; [...lb.children].forEach(c => c.classList.remove('on')); e.currentTarget.classList.add('on'); upd(); } }, t)));
-  const st = h('select', {}, READ_LEVELS.map(x => h('option', { value: x.lv, selected: x.lv === defaultStartLevel(Number(l.grade)) }, 'Level ' + x.lv + ' · ' + x.name)));
-  const warn = h('div', {}); const upd = () => { warn.innerHTML = ''; const have = D().results[rkey(id, 'reading_' + lang, phase)]; if (have) warn.append(h('p', { class: 'warn' }, 'Already has a ' + phaseLabel(phase).toLowerCase() + ' reading result (' + resLine(have) + '). Starting again replaces it.')); }; upd();
+  const tb = h('div', { class: 'seg' }, [['checkin', 'Check-in: letters to sentences'], ['passage', 'Passage and questions']].map(([k, t]) => h('button', { id: 'tool_' + k, class: k === tool ? 'on' : '', onclick: () => { if (!forced()) { tool = k; upd(); } } }, t)));
+  const para = h('input', { type: 'checkbox', id: 'rdPara', checked: Number(l.grade) >= 3 });
+  const paraRow = h('label', { class: 'chk' }, para, h('span', {}, 'Add a paragraph task if the learner reads Tasks 1 to 6 well'));
+  const note = h('p', { class: 'hint' }); const warn = h('div', {});
+  const forced = () => { if (phase !== 'post') return null; const pre = D().results[rkey(id, 'reading_' + lang, 'pre')]; return pre ? (pre.mode === 'passage' ? 'passage' : 'checkin') : null; };
+  const upd = () => {
+    const f = forced(); if (f) tool = f;
+    [...tb.children].forEach(c => { const k = c.id.replace('tool_', ''); c.classList.toggle('on', k === tool); c.disabled = !!f && k !== f; });
+    paraRow.hidden = tool !== 'checkin';
+    note.textContent = f ? 'The pretest used this tool, so the posttest must use it too. That keeps the two scores comparable.' : (tool === 'checkin'
+      ? 'For beginning readers, like the ARAL-Reading check-in: the learner reads aloud one task at a time (letters, syllables, words, phrases, sentences, then two questions). Tap each item read correctly and it turns green. A timer runs from Start. Finish all tasks even if there are mistakes.'
+      : 'For learners who already read sentences: the learner reads a short passage aloud (you count the mistakes and the time), then you ask four questions' + (Number(l.grade) >= 7 ? ' (junior high passage: word meaning, conclusion, author’s purpose, fact or opinion)' : ' (detail, word meaning, cause and effect, conclusion)') + '. Choose the tool at the pretest and use it again at the posttest.');
+    warn.innerHTML = ''; const have = D().results[rkey(id, 'reading_' + lang, phase)]; if (have) warn.append(h('p', { class: 'warn' }, 'Already has a ' + phaseLabel(phase).toLowerCase() + ' reading result (' + resLine(have) + '). Starting again replaces it.'));
+  }; upd();
   openSheet(h('div', { class: 'stack' }, h('h2', {}, 'Reading ' + phaseLabel(phase).toLowerCase()), h('p', { class: 'sub' }, l.name + ' · Grade ' + l.grade + ' · Form ' + (phase === 'pre' ? 'A' : 'B')),
-    h('label', { class: 'fld' }, h('span', {}, 'Language'), lb), h('label', { class: 'fld' }, h('span', {}, 'Start at'), st), h('p', { class: 'hint' }, 'The learner reads aloud. You tap ✔ or ✘. If the learner passes a level the test goes up; if not, it goes down, until the highest level passed is found.'), warn,
-    h('button', { class: 'btn primary wide', onclick: () => { closeSheet(); runReading(l, phase, lang, Number(st.value)); } }, 'Start')));
+    h('label', { class: 'fld' }, h('span', {}, 'Language'), lb), h('label', { class: 'fld' }, h('span', {}, 'Reading tool'), tb), note, paraRow, warn,
+    h('button', { class: 'btn primary wide', id: 'btnReadStart', onclick: () => { closeSheet(); if (tool === 'passage') { const pre = phase === 'post' ? D().results[rkey(id, 'reading_' + lang, 'pre')] : null; runPassage(l, phase, lang, pre && pre.mode === 'passage' && Number(pre.test_level) ? Number(pre.test_level) : (Number(l.grade) >= 7 ? 3 : 2)); } else runReading(l, phase, lang, para.checked); } }, 'Start')));
 }
-function runReading(l, phase, lang, start) {
-  const form = phase === 'pre' ? 'A' : 'B'; const bank = READING[lang][form];
-  const R = { l, phase, lang, form, done: {}, lv: start, marks: [], mic: [], idx: 0, miscues: 0, t0: Date.now(), micN: 0, micAgree: 0, log: {} };
+function runReading(l, phase, lang, withPara) {
+  setKey(null);
+  const form = phase === 'pre' ? 'A' : 'B'; const bank = KS1[lang][form]; const cfg = KS1[lang];
+  const R = { l, phase, lang, form, withPara, task: 1, marks: {}, sug: {}, miscues: 0, para: false, t0: Date.now() };
+  KS1_TASKS.forEach(t => { R.marks[t.id] = Array(t.n).fill(0); R.sug[t.id] = Array(t.n).fill(null); });
+  const timeEl = h('span', { class: 'timer', 'aria-label': 'Timer' }, '0:00');
+  R.tick = setInterval(() => { const s = Math.round((Date.now() - R.t0) / 1000); timeEl.textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }, 1000);
+  const stop = () => clearInterval(R.tick);
   const wrap = h('div', { class: 'tview' }); const body = h('div', { class: 'tbody' }); const foot = h('div', { class: 'tfoot' }); const bar = h('div', { class: 'prog' }, h('i', {}));
-  const lvInfo = () => READ_LEVELS[R.lv - 1];
+  const finish = () => finishReading(R, scoreReading(R.marks), stop);
+  const next = () => { if (R.task < 6) { R.task++; draw(); return; } const sc = scoreReading(R.marks); if (R.withPara && sc.pct >= 80) { R.task = 7; draw(); } else finish(); };
+  const listenRow = (T, items) => listen(R, cfg.mic, heard => { items.forEach((it, i) => { const txt = T.key === 'questions' ? it[0] : it; R.sug[T.id][i] = micSuggest(txt, heard); }); R.heard = heard; draw(); });
+  const drawPara = () => {
+    const text = bank.paragraph; const words = wordCount(text); bar.firstChild.style.width = '88%';
+    body.append(h('div', { class: 'cnt' }, h('span', {}, 'Task 7 · Paragraph · ' + words + ' words'), timeEl), h('p', { class: 'sub' }, lang === 'en' ? 'Read the paragraph. Count the words read wrongly or skipped.' : 'Basahin ang talata. Bilangin ang mga salitang maling nabasa o nalaktawan.'), h('div', { class: 'passage' }, text),
+      h('div', { class: 'stepper' }, h('span', {}, 'Words read wrong or skipped'), h('button', { class: 'btn', 'aria-label': 'Fewer', onclick: () => { R.miscues = Math.max(0, R.miscues - 1); draw(); } }, '−'), h('strong', {}, R.miscues), h('button', { class: 'btn', 'aria-label': 'More', onclick: () => { R.miscues = Math.min(words, R.miscues + 1); draw(); } }, '+')),
+      h('p', { class: 'hint center' }, 'Accuracy: ' + Math.round((words - R.miscues) / words * 100) + '%. Passing needs ' + Math.round(PARA_PASS * 100) + '% or more.'));
+    foot.append(h('button', { class: 'btn', onclick: () => { R.task = 6; draw(); } }, 'Back'), h('button', { class: 'btn primary', onclick: () => { R.para = true; finish(); } }, 'Finish'));
+  };
   const draw = () => {
-    setKey(null); body.innerHTML = ''; foot.innerHTML = ''; const info = lvInfo(); const items = bank[R.lv];
-    if (R.lv === 5) {
-      const text = items[0]; const words = wordCount(text);
-      bar.firstChild.style.width = '80%';
-      body.append(h('div', { class: 'cnt' }, 'Level 5 · Paragraph · ' + words + ' words'), h('div', { class: 'passage' }, text), h('div', { class: 'stepper' }, h('span', {}, 'Words read wrong or skipped'), h('button', { class: 'btn', onclick: () => { R.miscues = Math.max(0, R.miscues - 1); draw(); }, 'aria-label': 'Fewer' }, '−'), h('strong', {}, R.miscues), h('button', { class: 'btn', onclick: () => { R.miscues = Math.min(words, R.miscues + 1); draw(); }, 'aria-label': 'More' }, '+')),
-        h('p', { class: 'hint' }, 'Accuracy: ' + Math.round((words - R.miscues) / words * 100) + '%. Passing needs ' + Math.round(PARA_PASS * 100) + '% or more.'));
-      foot.append(h('button', { class: 'btn primary wide', onclick: () => endLevel() }, 'Finish level'));
-      return;
-    }
-    const n = items.length; const i = R.idx; bar.firstChild.style.width = ((R.lv - 1) * 20 + (i / n) * 20) + '%'; const text = items[i];
-    const micBox = h('div', { class: 'micbox' }); const cur = R.mic[i];
-    if (cur != null && cur !== '-') micBox.append(h('small', {}, 'Mic heard: “' + (R.heard && R.heard[i] || '') + '” · suggests ' + (cur === 1 ? '✔' : '✘')));
-    body.append(h('div', { class: 'cnt' }, 'Level ' + R.lv + ' · ' + info.name + ' · ' + (i + 1) + ' of ' + n + ' (needs ' + info.need + ')'), h('div', { class: 'readtext' + (R.lv >= 4 ? ' long' : '') }, text),
-      h('button', { class: 'btn mic', onclick: () => listen(R, text, i, draw) }, '🎤 Listen (optional)'), micBox);
-    foot.append(h('button', { class: 'btn bad', onclick: () => mark(0) }, '✘ Not yet'), h('button', { class: 'btn good', onclick: () => mark(1) }, '✔ Correct'));
-    if (isDesktop()) { body.append(h('p', { class: 'hint center' }, 'Keyboard: Y or Enter = Correct, N = Not yet')); setKey(e => { const k = String(e.key).toLowerCase(); if (k === 'y' || k === 'enter') { e.preventDefault(); mark(1); } else if (k === 'n') { e.preventDefault(); mark(0); } }); }
+    setKey(null); body.innerHTML = ''; foot.innerHTML = '';
+    if (R.task === 7) { drawPara(); return; }
+    const T = KS1_TASKS[R.task - 1]; const items = bank[T.key]; bar.firstChild.style.width = ((R.task - 1) / 6 * 100) + '%';
+    const isRow = T.key === 'letters' || T.key === 'syllables' || T.key === 'words';
+    const tiles = items.map((it, i) => {
+      const on = !!R.marks[T.id][i];
+      return h('button', { class: 'rtile ' + (isRow ? 'sm' : 'wide') + (on ? ' on' : '') + (R.sug[T.id][i] === 1 && !on ? ' sug' : ''), 'aria-pressed': on ? 'true' : 'false', onclick: () => { R.marks[T.id][i] = R.marks[T.id][i] ? 0 : 1; draw(); } },
+        h('span', { class: 'rt' }, T.key === 'questions' ? it[0] : it), T.key === 'questions' ? h('small', { class: 'ans' }, 'Answer: ' + it[1]) : null, h('span', { class: 'tick', 'aria-hidden': 'true' }, '✔'));
+    });
+    const got = R.marks[T.id].reduce((a, b) => a + b, 0);
+    body.append(h('div', { class: 'cnt' }, h('span', {}, 'Task ' + T.id + ' of 6 · ' + T.name), timeEl), h('p', { class: 'sub' }, cfg.say[T.key]), h('div', { class: 'rgrid ' + (isRow ? 'row' : 'col') }, tiles),
+      h('p', { class: 'hint center' }, got + ' of ' + T.n + ' correct · ' + passNeed(T.n) + ' needed to master this task' + (isDesktop() ? ' · Keys 1 to ' + T.n + ' tick an item, Enter = next' : '')));
+    if (['words', 'phrases', 'sentences'].indexOf(T.key) >= 0) body.append(h('button', { class: 'btn mic', onclick: () => listenRow(T, items) }, '🎤 Listen (optional)'));
+    body.append(h('button', { class: 'btn ghost', id: 'btnEndHere', onclick: () => { if (confirm('End the test here? The tasks not yet done will count as not read.')) finish(); } }, 'The learner cannot continue: end here'));
+    foot.append(h('button', { class: 'btn', disabled: R.task === 1, onclick: () => { R.task--; draw(); } }, 'Back'), h('button', { class: 'btn primary', id: 'btnNextTask', onclick: next }, R.task === 6 ? 'Finish' : 'Next task'));
+    if (isDesktop()) setKey(e => { const n = Number(e.key); if (n >= 1 && n <= T.n) { R.marks[T.id][n - 1] = R.marks[T.id][n - 1] ? 0 : 1; draw(); } else if (e.key === 'Enter') { e.preventDefault(); next(); } });
   };
-  const mark = v => { R.marks[R.idx] = v; const m = R.mic[R.idx]; if (m === 0 || m === 1) { R.micN++; if (m === v) R.micAgree++; } if (R.idx < bank[R.lv].length - 1) { R.idx++; draw(); } else endLevel(); };
-  const endLevel = () => {
-    const ok = levelPassed(R.lv, R.marks, R.lv === 5 ? wordCount(bank[5][0]) : 0, R.miscues); R.done[R.lv] = ok; R.done.__last = R.lv;
-    R.log[R.lv] = R.lv === 5 ? 'm' + R.miscues : R.marks.map(x => x ? 1 : 0).join('');
-    const nx = nextReadingLevel(R.done);
-    if (nx == null) { finishReading(R); return; }
-    R.lv = nx; R.idx = 0; R.marks = []; R.mic = []; R.heard = []; R.miscues = 0; draw();
-  };
-  wrap.append(topTest('Reading · ' + l.name, READING[lang].label + ' · ' + phaseLabel(phase) + ' · Form ' + form), bar, body, foot);
+  wrap.append(topTest('Reading · ' + l.name, cfg.label + ' · ' + phaseLabel(phase) + ' · Form ' + form, () => { stop(); closeTest(); }), bar, body, foot);
   openTest(wrap); draw();
 }
-function listen(R, target, i, redraw) {
+function listen(R, lang, cb) {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) { toast('Microphone check needs Chrome with internet. Use ✔ or ✘ instead.', 3500); return; }
-  const rec = new SR(); rec.lang = READING[R.lang].mic; rec.interimResults = false; rec.maxAlternatives = 3; toast('Listening… let the learner read now', 3000);
-  rec.onresult = e => { const alts = []; for (let k = 0; k < e.results[0].length; k++) alts.push(e.results[0][k].transcript); let best = 0; alts.forEach(a => { const s = micSuggest(target, a); if (s === 1) best = 1; }); R.mic[i] = best; (R.heard = R.heard || [])[i] = alts[0]; redraw(); };
-  rec.onerror = () => toast('Could not hear clearly. Try again or use ✔ / ✘.', 3000);
+  if (!SR) { toast('Microphone check needs Chrome with internet. Just tap the items instead.', 3500); return; }
+  const rec = new SR(); rec.lang = lang; rec.interimResults = false; rec.maxAlternatives = 1; toast('Listening… let the learner read the whole row now', 3500);
+  rec.onresult = e => { cb(e.results[0][0].transcript); };
+  rec.onerror = () => toast('Could not hear clearly. Try again or just tap the items.', 3000);
   try { rec.start(); } catch (e) { /* already listening */ }
 }
-function finishReading(R) {
-  const lvl = finalReadingLevel(R.done); const wrap = h('div', { class: 'tview' });
-  const answers = Object.keys(R.log).sort().map(k => 'L' + k + ':' + R.log[k]).join(';');
-  const res = { key: rkey(R.l.id, 'reading_' + R.lang, R.phase), learner_id: R.l.id, tutor_id: P.session.tutor_id, school: R.l.school, grade: R.l.grade, domain: 'reading_' + R.lang, phase: R.phase, form: R.form, test_level: '', answers, raw: lvl, total: 5, pct: lvl / 5 * 100, reading_level: lvl, fluency: '', mic_n: R.micN, mic_agree: R.micAgree, lang: R.lang, mode: 'tutor', date: todayISO(), duration_s: Math.round((Date.now() - R.t0) / 1000) };
-  wrap.append(h('div', { class: 'tbody scroll' }, h('div', { class: 'score' }, lvl === 5 ? h('span', { class: 'star', 'aria-hidden': 'true' }, '★') : null, h('div', { class: 'big' }, 'Level ' + lvl), h('p', {}, R.l.name + ' · ' + READING[R.lang].label + (lvl === 0 ? ' · below Level 1' : ' · ' + READ_LEVELS[lvl - 1].name))),
-    h('div', { class: 'ladder' }, READ_LEVELS.map(x => h('div', { class: 'rung ' + (R.done[x.lv] === true ? 'good' : R.done[x.lv] === false ? 'bad' : 'skip') }, h('b', {}, x.lv), h('span', {}, x.name), h('em', {}, R.done[x.lv] === true ? 'passed' : R.done[x.lv] === false ? 'not yet' : 'not tested')))),
-    R.micN ? h('p', { class: 'sub' }, 'The microphone agreed with your marks on ' + R.micAgree + ' of ' + R.micN + ' items.') : null),
-    h('div', { class: 'tfoot' }, h('button', { class: 'btn', onclick: () => runReading(R.l, R.phase, R.lang, defaultStartLevel(Number(R.l.grade))) }, 'Redo'), h('button', { class: 'btn primary', onclick: () => { addOp('result', res); toast('Saved'); closeTest(); } }, 'Save result')));
+function finishReading(R, sc, stopFn) {
+  stopFn(); setKey(null);
+  const secs = Math.round((Date.now() - R.t0) / 1000); const words = wordCount(KS1[R.lang][R.form].paragraph); const paraOk = R.para && (words - R.miscues) / words >= PARA_PASS;
+  const level = sc.level + (paraOk && sc.level === 6 ? 1 : 0);
+  let micN = 0, micAgree = 0; KS1_TASKS.forEach(t => R.sug[t.id].forEach((s, i) => { if (s === 0 || s === 1) { micN++; if (s === R.marks[t.id][i]) micAgree++; } }));
+  const answers = KS1_TASKS.map(t => 'T' + t.id + ':' + R.marks[t.id].join('')).join(';') + (R.para ? ';P:m' + R.miscues : '');
+  const conf = h('select', { id: 'rdConf', 'aria-label': 'Confidence' }, h('option', { value: '' }, 'Skip'), h('option', { value: '1' }, 'Not sure yet'), h('option', { value: '2' }, 'A little sure'), h('option', { value: '3' }, 'Very sure'));
+  const res = {
+    key: rkey(R.l.id, 'reading_' + R.lang, R.phase), learner_id: R.l.id, tutor_id: P.session.tutor_id, school: R.l.school, grade: R.l.grade, domain: 'reading_' + R.lang, phase: R.phase, form: R.form, test_level: '',
+    answers, raw: sc.raw, total: sc.total, pct: sc.pct, reading_level: level, fluency: '', mic_n: micN, mic_agree: micAgree, lang: R.lang, mode: 'tutor', date: todayISO(), duration_s: secs
+  };
+  const mastered = level === 0 ? 'No task mastered yet' : level >= 7 ? 'All tasks mastered, paragraph included' : 'Mastered up to Task ' + level + ' (' + KS1_TASKS[level - 1].name + ')';
+  const wrap = h('div', { class: 'tview' });
+  wrap.append(h('div', { class: 'tbody scroll' }, h('div', { class: 'score' }, sc.raw === sc.total ? h('span', { class: 'star', 'aria-hidden': 'true' }, '★') : null, h('div', { class: 'big' }, sc.raw + ' / ' + sc.total), h('p', {}, R.l.name + ' · ' + KS1[R.lang].label + ' · ' + Math.round(sc.pct) + '%'), h('p', {}, mastered)),
+    h('div', { class: 'ladder' }, KS1_TASKS.map(t => h('div', { class: 'rung ' + (sc.per[t.id] >= passNeed(t.n) ? 'good' : 'bad') }, h('b', {}, t.id), h('span', {}, t.name), h('em', {}, sc.per[t.id] + ' / ' + t.n))), R.para ? h('div', { class: 'rung ' + (paraOk ? 'good' : 'bad') }, h('b', {}, 7), h('span', {}, 'Paragraph'), h('em', {}, paraOk ? 'passed' : 'not yet')) : null),
+    h('p', { class: 'sub' }, 'Time: ' + Math.floor(secs / 60) + ':' + String(secs % 60).padStart(2, '0') + (micN ? ' · The microphone agreed with your ticks on ' + micAgree + ' of ' + micN + ' items.' : '')),
+    h('label', { class: 'fld' }, h('span', {}, 'Ask the learner: how sure are you about reading? (optional)'), conf)),
+    h('div', { class: 'tfoot' }, h('button', { class: 'btn', onclick: () => runReading(R.l, R.phase, R.lang, R.withPara) }, 'Redo'), h('button', { class: 'btn primary', id: 'btnSaveRead', onclick: () => { res.fluency = conf.value === '' ? '' : Number(conf.value); addOp('result', res); toast('Saved'); closeTest(); } }, 'Save result')));
+  openTest(wrap);
+}
+
+function runPassage(l, phase, lang, ks) {
+  setKey(null); ks = ks || (Number(l.grade) >= 7 ? 3 : 2);
+  const form = phase === 'pre' ? 'A' : 'B'; const PS = (ks === 3 ? PLUS3 : PLUS)[lang][form]; const words = wordCount(PS.text); const cfg = KS1[lang];
+  const R = { step: 0, t0: 0, secs: 0, miscues: 0, marks: [0, 0, 0, 0], tick: null };
+  const timeEl = h('span', { class: 'timer', 'aria-label': 'Timer' }, '0:00'); const stop = () => clearInterval(R.tick);
+  const wrap = h('div', { class: 'tview' }); const body = h('div', { class: 'tbody' }); const foot = h('div', { class: 'tfoot' }); const bar = h('div', { class: 'prog' }, h('i', {}));
+  const draw = () => {
+    body.innerHTML = ''; foot.innerHTML = ''; bar.firstChild.style.width = (R.step / 3 * 100) + '%';
+    if (R.step === 0) {
+      body.append(h('div', { class: 'cnt' }, h('span', {}, 'Passage · ' + words + ' words')), h('p', { class: 'sub' }, lang === 'en' ? 'The learner will read a short passage aloud. Tap Start when the learner begins to read.' : 'Babasahin ng bata nang malakas ang maikling talata. Pindutin ang Start kapag nagsimula na siyang magbasa.'), h('p', { class: 'hint' }, 'Keep the questions hidden. Count the words read wrongly or skipped.'));
+      foot.append(h('button', { class: 'btn primary wide', id: 'btnPassStart', onclick: () => { R.step = 1; R.t0 = Date.now(); R.tick = setInterval(() => { const x = Math.round((Date.now() - R.t0) / 1000); timeEl.textContent = Math.floor(x / 60) + ':' + String(x % 60).padStart(2, '0'); }, 1000); draw(); } }, 'Start'));
+    } else if (R.step === 1) {
+      body.append(h('div', { class: 'cnt' }, h('span', {}, PS.title), timeEl), h('div', { class: 'passage' }, PS.text));
+      foot.append(h('button', { class: 'btn primary wide', id: 'btnPassDone', onclick: () => { stop(); R.secs = Math.max(1, Math.round((Date.now() - R.t0) / 1000)); R.step = 2; draw(); } }, 'The learner finished reading'));
+    } else if (R.step === 2) {
+      const acc = Math.round((words - R.miscues) / words * 100);
+      body.append(h('div', { class: 'cnt' }, h('span', {}, 'Reading accuracy'), h('span', { class: 'timer' }, Math.floor(R.secs / 60) + ':' + String(R.secs % 60).padStart(2, '0'))), h('div', { class: 'passage small' }, PS.text),
+        h('div', { class: 'stepper' }, h('span', {}, 'Words read wrong or skipped'), h('button', { class: 'btn', 'aria-label': 'Fewer', onclick: () => { R.miscues = Math.max(0, R.miscues - 1); draw(); } }, '−'), h('strong', {}, R.miscues), h('button', { class: 'btn', 'aria-label': 'More', onclick: () => { R.miscues = Math.min(words, R.miscues + 1); draw(); } }, '+')),
+        h('p', { class: 'hint center' }, 'Accuracy ' + acc + '% · about ' + Math.round((words - R.miscues) / (R.secs / 60)) + ' words correct per minute'));
+      foot.append(h('button', { class: 'btn primary wide', id: 'btnPassQs', onclick: () => { R.step = 3; draw(); } }, 'Next: the questions'));
+    } else {
+      body.append(h('div', { class: 'cnt' }, h('span', {}, 'Questions · ask each one, then tap if the answer is right')), h('p', { class: 'sub' }, cfg.say.questions),
+        h('div', { class: 'rgrid col' }, PS.qs.map((q, i) => h('button', { class: 'rtile wide' + (R.marks[i] ? ' on' : ''), 'aria-pressed': R.marks[i] ? 'true' : 'false', onclick: () => { R.marks[i] = R.marks[i] ? 0 : 1; draw(); } }, h('span', { class: 'rt' }, q[0]), h('small', { class: 'ans' }, q[2] + ' · Answer: ' + q[1]), h('span', { class: 'tick', 'aria-hidden': 'true' }, '✔')))));
+      foot.append(h('button', { class: 'btn', onclick: () => { R.step = 2; draw(); } }, 'Back'), h('button', { class: 'btn primary', id: 'btnPassFinish', onclick: () => finishPassage(R, l, phase, lang, form, words, ks) }, 'Finish'));
+    }
+  };
+  wrap.append(topTest('Passage · ' + l.name, cfg.label + ' · ' + phaseLabel(phase) + ' · Form ' + form, () => { stop(); closeTest(); }), bar, body, foot);
+  openTest(wrap); draw();
+}
+function finishPassage(R, l, phase, lang, form, words, ks) {
+  const correct = R.marks.reduce((a, b) => a + b, 0); const sc = scorePassage(words, R.miscues, R.secs, correct); setKey(null);
+  const res = {
+    key: rkey(l.id, 'reading_' + lang, phase), learner_id: l.id, tutor_id: P.session.tutor_id, school: l.school, grade: l.grade, domain: 'reading_' + lang, phase, form, test_level: ks,
+    answers: 'PR:m' + R.miscues + ';T:' + R.secs + ';Q:' + R.marks.join(''), raw: correct, total: 4, pct: sc.pct, reading_level: correct, fluency: sc.wcpm, mic_n: '', mic_agree: '', lang, mode: 'passage', date: todayISO(), duration_s: R.secs
+  };
+  const wrap = h('div', { class: 'tview' });
+  wrap.append(h('div', { class: 'tbody scroll' }, h('div', { class: 'score' }, sc.pct >= 100 ? h('span', { class: 'star', 'aria-hidden': 'true' }, '★') : null, h('div', { class: 'big' }, Math.round(sc.pct) + '%'), h('p', {}, l.name + ' · ' + KS1[lang].label + ' · Passage')),
+    h('div', { class: 'ladder' }, h('div', { class: 'rung ' + (sc.acc >= 90 ? 'good' : 'bad') }, h('b', {}, '1'), h('span', {}, 'Reading accuracy'), h('em', {}, Math.round(sc.acc) + '%')), h('div', { class: 'rung ' + (correct >= 3 ? 'good' : 'bad') }, h('b', {}, '2'), h('span', {}, 'Questions'), h('em', {}, correct + ' / 4')), h('div', { class: 'rung skip' }, h('b', {}, '3'), h('span', {}, 'Words correct per minute'), h('em', {}, String(sc.wcpm)))),
+    h('p', { class: 'sub' }, 'The score is half reading accuracy and half questions. Words per minute is recorded separately.')),
+    h('div', { class: 'tfoot' }, h('button', { class: 'btn', onclick: () => runPassage(l, phase, lang, ks) }, 'Redo'), h('button', { class: 'btn primary', id: 'btnSavePass', onclick: () => { addOp('result', res); toast('Saved'); closeTest(); } }, 'Save result')));
   openTest(wrap);
 }
 
@@ -1186,7 +1340,7 @@ function metrics() {
     const mx = d => Math.max(0, ...tr.filter(t => t.domain === d && !Number(t.absent) && t.worksheet !== '').map(t => Number(t.worksheet)));
     const mxMath = (() => { let best = 0; tr.forEach(t => { if (t.domain === 'math' && !Number(t.absent) && t.worksheet !== '') best = Math.max(best, (entrySet(t) || 1) * 1000 + Number(t.worksheet)); }); return best ? setLabel(Math.floor(best / 1000)) + '-' + (best % 1000) : ''; })();
     const days = new Set(tr.filter(t => !Number(t.absent)).map(t => t.date)).size; const abs = new Set(tr.filter(t => Number(t.absent)).map(t => t.date)).size;
-    return { l, nPre: n.pre ? n.pre.pct : null, nPost: n.post ? n.post.pct : null, rLang: rd, rPre: r.pre ? r.pre.reading_level : null, rPost: r.post ? r.post.reading_level : null, wsMath: mxMath, wsRead: mx('reading'), days, abs };
+    return { l, nPre: n.pre ? n.pre.pct : null, nPost: n.post ? n.post.pct : null, rLang: rd, rPre: r.pre ? r.pre.pct : null, rPost: r.post ? r.post.pct : null, wsMath: mxMath, wsRead: mx('reading'), days, abs };
   });
   return rows;
 }
@@ -1197,30 +1351,30 @@ function scrReport() {
   const nGain = avg(nPairs.map(r => r.nPost - r.nPre)); const rGain = avg(rPairs.map(r => r.rPost - r.rPre));
   const card = (t, v, s) => h('div', { class: 'stat-card' }, h('small', {}, t), h('strong', {}, v), h('span', {}, s));
   box.append(h('h2', {}, 'My learners’ progress'),
-    h('div', { class: 'cards' }, card('Numeracy gain', nGain == null ? '—' : (nGain > 0 ? '+' : '') + nGain + ' pts', nPairs.length + ' learners with both tests'), card('Reading gain', rGain == null ? '—' : (rGain > 0 ? '+' : '') + rGain + ' levels', rPairs.length + ' learners with both tests'),
-      card('Improved in numeracy', nPairs.length ? Math.round(nPairs.filter(r => r.nPost > r.nPre).length / nPairs.length * 100) + '%' : '—', 'scored higher on the posttest'), card('Moved up in reading', rPairs.length ? Math.round(rPairs.filter(r => r.rPost > r.rPre).length / rPairs.length * 100) + '%' : '—', 'reached a higher level')),
+    h('div', { class: 'cards' }, card('Numeracy gain', nGain == null ? '—' : (nGain > 0 ? '+' : '') + nGain + ' pts', nPairs.length + ' learners with both tests'), card('Reading gain', rGain == null ? '—' : (rGain > 0 ? '+' : '') + rGain + ' pts', rPairs.length + ' learners with both tests'),
+      card('Improved in numeracy', nPairs.length ? Math.round(nPairs.filter(r => r.nPost > r.nPre).length / nPairs.length * 100) + '%' : '—', 'scored higher on the posttest'), card('Improved in reading', rPairs.length ? Math.round(rPairs.filter(r => r.rPost > r.rPre).length / rPairs.length * 100) + '%' : '—', 'scored higher on the posttest')),
     h('div', { class: 'two' }, h('button', { class: 'btn', onclick: downloadCSV }, 'Download CSV'), h('button', { class: 'btn primary', onclick: printReport }, 'Print or save as PDF')));
   if (!rows.length) box.append(h('p', { class: 'sub' }, 'Add learners and run the pretest to see progress here.'));
   else box.append(h('div', { class: 'scrollx' }, reportTable(rows)));
-  box.append(h('p', { class: 'hint' }, 'Numeracy gain is in percentage points. Reading level goes from 0 to 5. Reports are built on this phone, so nothing extra is stored online.'));
+  box.append(h('p', { class: 'hint' }, 'Gains are in percentage points of items read or answered correctly. Reports are built on this phone, so nothing extra is stored online.'));
   return box;
 }
 function fmtGain(a, b, u) { if (a == null || b == null) return '—'; const g = round1(b - a); return (g > 0 ? '+' : '') + g + (u || ''); }
 function reportTable(rows) {
   return h('table', { class: 'rep' }, h('thead', {}, h('tr', {}, ['Learner', 'Gr', 'Num pre', 'Num post', 'Gain', 'Read pre', 'Read post', 'Gain', 'WS math', 'Days'].map(t => h('th', {}, t)))),
     h('tbody', {}, rows.map(r => h('tr', {}, h('th', {}, r.l.name), h('td', {}, r.l.grade), h('td', {}, r.nPre == null ? '—' : Math.round(r.nPre) + '%'), h('td', {}, r.nPost == null ? '—' : Math.round(r.nPost) + '%'), h('td', { class: gainCls(r.nPre, r.nPost) }, fmtGain(r.nPre, r.nPost)),
-      h('td', {}, r.rPre == null ? '—' : r.rPre), h('td', {}, r.rPost == null ? '—' : r.rPost), h('td', { class: gainCls(r.rPre, r.rPost) }, fmtGain(r.rPre, r.rPost)), h('td', {}, r.wsMath || '—'), h('td', {}, r.days)))));
+      h('td', {}, r.rPre == null ? '—' : Math.round(r.rPre) + '%'), h('td', {}, r.rPost == null ? '—' : Math.round(r.rPost) + '%'), h('td', { class: gainCls(r.rPre, r.rPost) }, fmtGain(r.rPre, r.rPost)), h('td', {}, r.wsMath || '—'), h('td', {}, r.days)))));
 }
 const gainCls = (a, b) => (a == null || b == null ? '' : b > a ? 'up' : b < a ? 'down' : '');
 function csvCell(v) { v = v == null ? '' : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
 function downloadCSV() {
-  const head = ['learner_code', 'name', 'school', 'grade', 'group', 'numeracy_pre_pct', 'numeracy_post_pct', 'numeracy_gain', 'reading_language', 'reading_pre_level', 'reading_post_level', 'reading_gain', 'max_math_worksheet', 'max_reading_worksheet', 'days_present', 'days_absent'];
-  const lines = [head.join(',')]; metrics().forEach(r => lines.push([r.l.id, r.l.name, r.l.school, r.l.grade, r.l.group, r.nPre == null ? '' : round1(r.nPre), r.nPost == null ? '' : round1(r.nPost), r.nPre != null && r.nPost != null ? round1(r.nPost - r.nPre) : '', r.rLang || '', r.rPre == null ? '' : r.rPre, r.rPost == null ? '' : r.rPost, r.rPre != null && r.rPost != null ? r.rPost - r.rPre : '', r.wsMath || '', r.wsRead || '', r.days, r.abs].map(csvCell).join(',')));
+  const head = ['learner_code', 'name', 'school', 'grade', 'group', 'numeracy_pre_pct', 'numeracy_post_pct', 'numeracy_gain', 'reading_language', 'reading_pre_pct', 'reading_post_pct', 'reading_gain', 'max_math_worksheet', 'max_reading_worksheet', 'days_present', 'days_absent'];
+  const lines = [head.join(',')]; metrics().forEach(r => lines.push([r.l.id, r.l.name, r.l.school, r.l.grade, r.l.group, r.nPre == null ? '' : round1(r.nPre), r.nPost == null ? '' : round1(r.nPost), r.nPre != null && r.nPost != null ? round1(r.nPost - r.nPre) : '', r.rLang || '', r.rPre == null ? '' : round1(r.rPre), r.rPost == null ? '' : round1(r.rPost), r.rPre != null && r.rPost != null ? round1(r.rPost - r.rPre) : '', r.wsMath || '', r.wsRead || '', r.days, r.abs].map(csvCell).join(',')));
   const blob = new Blob(['\ufeff' + lines.join('\n')], { type: 'text/csv;charset=utf-8' }); const a = h('a', { href: URL.createObjectURL(blob), download: 'ARAL-progress-' + P.session.tutor_id + '-' + todayISO() + '.csv' }); document.body.append(a); a.click(); a.remove();
 }
 function printReport() {
   const root = $('#printRoot'); root.innerHTML = '';
-  root.append(h('h2', {}, 'ARAL progress report'), h('p', {}, P.session.name + ' · ' + P.session.tutor_id + ' · ' + (distByCode(P.session.district) || {}).name + ' · ' + todayISO()), reportTable(metrics()), h('p', {}, 'Numeracy in % of items correct. Reading level 0 to 5. WS math = highest worksheet number reached.'));
+  root.append(h('h2', {}, 'ARAL progress report'), h('p', {}, P.session.name + ' · ' + P.session.tutor_id + ' · ' + (distByCode(P.session.district) || {}).name + ' · ' + todayISO()), reportTable(metrics()), h('p', {}, 'Numeracy and reading in % of items correct. WS math = highest worksheet reached.'));
   document.body.classList.add('printing-test'); setTimeout(() => { window.print(); document.body.classList.remove('printing-test'); }, 100);
 }
 
@@ -1264,7 +1418,7 @@ function sheetHelp(open) {
     sec('tests', 'Pretest and posttest',
       h('p', {}, 'Do the Pretest at the start and the Posttest at the end of the program. The app opens on Posttest from December 1. You can switch at the top of Learners.'),
       h('p', {}, h('strong', {}, 'Numeracy: '), 'Tap a learner, then Numeracy. Choose a lower level for a learner who is behind. The learner answers on the phone, or you type answers from paper. A ○ in the result means review that item. Correct answers are not shown so the posttest stays fair.'),
-      h('p', {}, h('strong', {}, 'Reading: '), 'The learner reads aloud. Tap ✔ Correct or ✘ Not yet. If the learner passes a level the test goes up, if not it goes down, to find the highest level passed (0 to 5). The microphone button is optional and only a suggestion; your ✔ or ✘ counts.')),
+      h('p', {}, h('strong', {}, 'Reading: '), 'Like the ARAL-Reading check-in, the learner reads aloud one task at a time: letters, syllables, words, phrases, sentences, then two questions. Tap each item the learner reads correctly and it turns green. The timer runs from Start. Do all six tasks even if there are mistakes. The microphone button is optional and only a suggestion; your taps count. For learners who already read sentences, choose Passage and questions: they read a short passage aloud, you count the mistakes and the time, then ask four questions. Use the same tool at the posttest.')),
     sec('dtr', 'DTR and accomplishment',
       h('p', {}, 'Your DTR and accomplishment report are in the ARAL Tutor Engagement app. Open it from Account, then Open DTR and Accomplishment. It has its own sign-in (reference number and PIN).')),
     sec('offline', 'No signal?',
