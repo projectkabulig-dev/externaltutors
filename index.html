@@ -151,6 +151,8 @@ table.mini{width:100%;border-collapse:collapse;font-size:14px}.mini th,.mini td{
 .tries{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:14px;color:var(--ink2)}.tries ul{margin:6px 0 0 18px;padding:0}.tries strong{color:var(--ink)}
 .strip{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:14px;color:var(--ink2)}.sym{font-weight:700;font-size:18px;line-height:1}.sym.star{color:var(--sun)}.sym.tri{color:var(--ink)}.sym.circ{color:var(--coral)}.sym.ci{font-size:12px;background:var(--sea-l);border-radius:8px;padding:3px 7px;color:var(--sea-d)}.grow.help{border-color:var(--ink)}.grow.notyet{border-color:var(--coral);background:var(--coral-l)}
 .lasbox{border:1px dashed var(--line);border-radius:12px;padding:10px 12px;background:#fff;display:flex;flex-direction:column;gap:6px}.row2{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.row2 input{min-height:44px;width:100%}.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.row3 input{min-height:44px;width:100%}
+.login.mon{max-width:1100px}.montop{display:flex;align-items:center;gap:10px}.montop h2{margin:0}.mchips{display:flex;flex-wrap:wrap;gap:8px}.mchip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 14px;font-weight:700;cursor:pointer;color:var(--ink)}.mchip.on{border-color:var(--sea);background:var(--sea-l)}.monfilters{display:grid;grid-template-columns:1fr;gap:8px}.mst{padding:3px 10px;border-radius:999px;font-weight:700;font-size:13px}.mst.active{background:var(--leaf-l);color:var(--leaf)}.mst.quiet{background:var(--coral-l);color:var(--coral)}.mst.notstarted{background:var(--sun-l);color:#7a5200}.mst.nolearners{background:#EEF1F6;color:var(--ink2)}.monTable{min-width:760px}.monTable th:first-child,.monTable td:nth-child(2){text-align:left}
+@media (min-width:900px){.monfilters{grid-template-columns:200px 1fr 220px}}
 .stat{padding:10px 12px;border-radius:10px;font-weight:700;text-align:center}.stat.perfect{background:var(--sun-l);color:#7A5600}.stat.redo{background:var(--coral-l);color:var(--coral)}
 
 /* report */
@@ -724,6 +726,7 @@ const CONFIG = {
     { code: 'SJF', name: 'San Jose-Santa Fe', url: 'https://script.google.com/macros/s/AKfycbwyQOt661M5GidmECS_xpJ3XYHGUOfb7enyUJ5Y12NnovViKzn3vH9E1EP0fJ1RtGSo/exec' },
     { code: 'DEMO', name: 'Practice mode (works without internet)', url: '' }
   ],
+  MONITOR_URL: '', // link of the Summary web app (ends with /exec) for the Division monitor; can also be pasted once in the app
   ENGAGEMENT_URL: 'https://tinyurl.com/2026aralexternaltutorsv1', // ARAL Tutor Engagement App (DTR and accomplishment)
   POST_FROM: '2026-12-01' // on or after this date the app opens on Posttest by default
 };
@@ -772,7 +775,7 @@ let P = null; try { P = JSON.parse(localStorage.getItem(LS)); } catch (e) { P = 
 P = P || { session: null, data: {}, last: {} };
 if (P.session && P.session.remember === false && !sessionStorage.getItem('aral-alive')) { P.session = null; }
 sessionStorage.setItem('aral-alive', '1');
-const S = { tab: 'learners', phase: autoPhase(), q: '', openRow: null, sdom: 'math', online: navigator.onLine };
+const S = { tab: 'learners', phase: autoPhase(), q: '', openRow: null, sdom: 'math', online: navigator.onLine, monitor: false };
 function save() { try { localStorage.setItem(LS, JSON.stringify(P)); } catch (e) { toast('Phone storage is full. Sync first, then free some space.'); } }
 function D() { const id = P.session.tutor_id; return P.data[id] || (P.data[id] = { learners: [], results: {}, tracker: [], queue: [], pulledAt: 0 }); }
 const activeLearners = () => D().learners.filter(l => l.status !== 'removed').sort((a, b) => a.name.localeCompare(b.name));
@@ -892,6 +895,7 @@ const MARKS = '<svg viewBox="0 0 96 28" width="96" height="28" aria-hidden="true
 
 function render() {
   const app = $('#app'); app.innerHTML = '';
+  if (S.monitor) { app.append(monitorScreen()); return; }
   if (!P.session) { app.append(loginScreen()); return; }
   const dist = distByCode(P.session.district);
   const main = S.tab === 'learners' ? scrLearners() : S.tab === 'session' ? scrSession() : S.tab === 'report' ? scrReport() : scrAccount();
@@ -940,7 +944,7 @@ function loginScreen() {
     h('label', { class: 'fld' }, h('span', {}, 'District'), dsel), h('label', { class: 'fld' }, h('span', {}, 'Tutor code'), code), h('label', { class: 'fld' }, h('span', {}, 'PIN'), pin),
     h('label', { class: 'chk' }, show, h('span', {}, 'Show PIN')), h('label', { class: 'chk' }, rem, h('span', {}, 'Keep me signed in on this phone')), msg, signIn,
     h('div', { class: 'or' }, h('span', {}, 'First time here?')), reg, forgot,
-    h('button', { class: 'btn ghost wide', id: 'btnHelp', onclick: () => sheetHelp() }, 'How this app works'),
+    h('button', { class: 'btn ghost wide', id: 'btnHelp', onclick: () => sheetHelp() }, 'How this app works'), h('button', { class: 'btn ghost wide', id: 'btnMonitor', onclick: () => openMonitor() }, 'Division monitor (PIN)'),
     h('p', { class: 'note' }, 'Learner names stay in your district sheet. Division reports use learner codes only.'));
 }
 async function doLogin(v, msg, btn) {
@@ -1589,6 +1593,76 @@ function sheetGroupLogReading(date) {
     } }, 'Save for the group')));
 }
 
+/* ================= DIVISION MONITOR (PIN) ================= */
+/* Shows the Tutor_Monitor tab of the Summary sheet. The PIN is checked by the Summary script, not by this page, so the numbers never travel without it. */
+const MON = { pin: '', data: null, loading: false, err: '', district: '', status: '', q: '', sort: 'attention', keep: false };
+const monUrl = () => { let u = ''; try { u = localStorage.getItem('aral-monitor-url') || ''; } catch (e) { u = ''; } return CONFIG.MONITOR_URL || u; };
+function openMonitor() {
+  S.monitor = true;
+  try { const p = localStorage.getItem('aral-monitor-pin'); if (p && !MON.data) { MON.pin = p; MON.keep = true; } } catch (e) { /* no storage */ }
+  render(); window.scrollTo(0, 0); if (MON.pin && !MON.loading && monUrl()) loadMonitor('monitor'); /* open fresh every time */
+}
+function closeMonitor() { S.monitor = false; render(); }
+function lockMonitor() { MON.pin = ''; MON.data = null; MON.err = ''; MON.keep = false; try { localStorage.removeItem('aral-monitor-pin'); } catch (e) { /* no storage */ } render(); }
+async function monCall(action) {
+  const url = monUrl(); if (!url) return { ok: false, error: 'The monitor link is not set yet.' };
+  const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), action === 'monitor_refresh' ? 300000 : 30000);
+  try {
+    const res = await fetch(url, { method: 'POST', body: JSON.stringify({ action, pin: MON.pin }), signal: ctl.signal }); const text = await res.text();
+    try { return JSON.parse(text); } catch (e) { return { ok: false, error: 'The monitor did not answer correctly. Check that the Summary web app is deployed for Anyone.' }; }
+  } catch (e) { return { ok: false, error: (e && e.name === 'AbortError') ? 'It took too long to answer.' : 'No signal. Connect to the internet to see the monitor.' }; } finally { clearTimeout(to); }
+}
+async function loadMonitor(action) {
+  MON.loading = true; MON.err = ''; render(); const res = await monCall(action || 'monitor'); MON.loading = false;
+  if (!res.ok) { MON.err = res.error || 'Could not load the monitor.'; if (/PIN/.test(MON.err)) { MON.pin = ''; try { localStorage.removeItem('aral-monitor-pin'); } catch (e) { /* no storage */ } } MON.data = null; }
+  else { MON.data = res; try { if (MON.keep) localStorage.setItem('aral-monitor-pin', MON.pin); } catch (e) { /* no storage */ } }
+  render();
+}
+const MON_ORDER = { 'Quiet': 0, 'Not started': 1, 'No learners yet': 2, 'Active': 3 };
+const monCls = st => (st === 'Active' ? 'active' : st === 'Quiet' ? 'quiet' : st === 'Not started' ? 'notstarted' : 'nolearners');
+function monitorScreen() {
+  const wrap = h('div', { class: 'login mon' }, h('div', { class: 'montop' }, h('button', { class: 'btn ghost', id: 'monBack', onclick: closeMonitor }, '\u2190 Back'), h('h2', {}, 'Division monitor')));
+  if (MON.loading) { wrap.append(h('p', { class: 'sub', id: 'monLoading' }, 'Loading\u2026 this can take a few seconds.')); return wrap; }
+  if (!monUrl()) {
+    const inp = h('input', { id: 'monUrl', type: 'url', placeholder: 'https://script.google.com/macros/s/\u2026/exec' });
+    wrap.append(h('p', { class: 'sub' }, 'The monitor link is not set on this phone yet. Paste the link of the Summary web app (it ends with /exec). Ask the person who set up the Summary sheet.'), h('label', { class: 'fld' }, h('span', {}, 'Monitor link'), inp),
+      h('button', { class: 'btn primary wide', id: 'monSaveUrl', onclick: () => { const v = inp.value.trim(); if (!/^https:\/\/script\.google\.com\/.+\/exec$/.test(v)) { toast('That does not look like a web app link that ends with /exec.', 3500); return; } try { localStorage.setItem('aral-monitor-url', v); } catch (e) { /* no storage */ } render(); } }, 'Save link'));
+    return wrap;
+  }
+  if (!MON.data) {
+    const pin = h('input', { id: 'monPin', type: 'password', inputmode: 'numeric', autocomplete: 'off', maxlength: '12', placeholder: 'PIN' }); const keep = h('input', { type: 'checkbox', id: 'monKeep', checked: MON.keep });
+    const show = h('input', { type: 'checkbox', id: 'monShow', onchange: e => { pin.type = e.target.checked ? 'text' : 'password'; } });
+    const go = () => { MON.pin = pin.value.trim(); MON.keep = keep.checked; if (!MON.pin) { MON.err = 'Enter the PIN.'; render(); return; } loadMonitor('monitor'); };
+    pin.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+    wrap.append(h('p', { class: 'sub' }, 'Only people who know the PIN can see the tutors and how they are doing.'), MON.err ? h('p', { class: 'err', id: 'monErr', role: 'alert' }, MON.err) : null, h('label', { class: 'fld' }, h('span', {}, 'PIN'), pin),
+      h('label', { class: 'chk' }, show, h('span', {}, 'Show PIN')), h('label', { class: 'chk' }, keep, h('span', {}, 'Remember the PIN on this phone')), h('button', { class: 'btn primary wide', id: 'monGo', onclick: go }, 'See the results'));
+    return wrap;
+  }
+  const d0 = MON.data; const ix = {}; d0.headers.forEach((c, i) => { ix[c] = i; });
+  const rows = d0.rows.map(r => ({ district: r[ix.district], id: r[ix.tutor_id], name: r[ix.tutor_name], school: r[ix.school], learners: r[ix.learners], npre: r[ix.num_pre_pct], rpre: r[ix.read_pre_pct], l7: r[ix.last_7_days], last: r[ix.last_activity], since: r[ix.days_since], status: r[ix.status] }));
+  const districts = [...new Set(rows.map(r => r.district))]; const counts = {}; rows.forEach(r => { counts[r.status] = (counts[r.status] || 0) + 1; });
+  const listBox = h('div', {}); const chipBox = h('div', { class: 'mchips' });
+  const drawList = () => {
+    const q = MON.q.toLowerCase();
+    const list = rows.filter(r => (!MON.district || r.district === MON.district) && (!MON.status || r.status === MON.status) && (!q || (r.id + ' ' + r.school + ' ' + (r.name || '')).toLowerCase().indexOf(q) >= 0));
+    list.sort(MON.sort === 'attention' ? (a, b) => (MON_ORDER[a.status] - MON_ORDER[b.status]) || String(a.id).localeCompare(String(b.id)) : (a, b) => String(a.id).localeCompare(String(b.id)));
+    const pc = v => (v === '' || v == null ? '\u2014' : v + '%');
+    listBox.innerHTML = ''; listBox.append(h('p', { class: 'hint', id: 'monCount' }, 'Showing ' + list.length + ' of ' + rows.length + ' tutors'),
+      h('div', { class: 'scrollx' }, h('table', { class: 'rep monTable' }, h('thead', {}, h('tr', {}, ['Tutor', 'School', 'Learners', 'Numeracy pretest', 'Reading pretest', 'Last 7 days', 'Last activity', 'Status'].map(t => h('th', {}, t)))),
+        h('tbody', {}, list.map(r => h('tr', {}, h('th', {}, r.id + (r.name ? ' ' + r.name : '') + ' \u00B7 ' + r.district), h('td', {}, r.school), h('td', {}, r.learners), h('td', {}, pc(r.npre)), h('td', {}, pc(r.rpre)), h('td', {}, r.l7), h('td', {}, r.last ? r.last + (r.since !== '' ? ' (' + r.since + ' d)' : '') : '\u2014'), h('td', {}, h('span', { class: 'mst ' + monCls(r.status) }, r.status))))))));
+  };
+  const drawChips = () => { chipBox.innerHTML = ''; [['', 'All ' + rows.length]].concat(['Active', 'Quiet', 'Not started', 'No learners yet'].map(s => [s, s + ' ' + (counts[s] || 0)])).forEach(([k, t]) => chipBox.append(h('button', { class: 'mchip' + (MON.status === k ? ' on' : ''), 'data-st': k, onclick: () => { MON.status = k; drawChips(); drawList(); } }, t))); };
+  const dsel = h('select', { id: 'monDist', 'aria-label': 'District', onchange: e => { MON.district = e.target.value; drawList(); } }, h('option', { value: '' }, 'All districts'), districts.map(x => h('option', { value: x, selected: MON.district === x }, x)));
+  const search = h('input', { id: 'monQ', type: 'search', placeholder: 'Search tutor code or school', value: MON.q, oninput: e => { MON.q = e.target.value; drawList(); } });
+  const ssel = h('select', { id: 'monSort', 'aria-label': 'Sort', onchange: e => { MON.sort = e.target.value; drawList(); } }, h('option', { value: 'attention', selected: MON.sort === 'attention' }, 'Needs attention first'), h('option', { value: 'code', selected: MON.sort === 'code' }, 'Tutor code'));
+  drawChips(); drawList();
+  wrap.append(h('p', { class: 'sub', id: 'monUpdated' }, d0.updated || ''), chipBox, h('div', { class: 'monfilters' }, dsel, search, ssel), listBox,
+    h('p', { class: 'hint' }, 'Quiet can also mean the tutor had no signal: phones send their work when there is signal. The list refreshes every hour.'),
+    h('div', { class: 'two' }, h('button', { class: 'btn', id: 'monReload', onclick: () => loadMonitor('monitor') }, 'Reload the list'), h('button', { class: 'btn', id: 'monUpdate', onclick: () => { if (confirm('This asks the Summary sheet to read all the districts again. It takes a minute or two. Continue?')) loadMonitor('monitor_refresh'); } }, 'Update now')),
+    h('button', { class: 'btn danger wide', id: 'monLock', onclick: lockMonitor }, 'Lock and forget the PIN'));
+  return wrap;
+}
+
 /* ================= REPORT ================= */
 function metrics() {
   const rows = activeLearners().map(l => {
@@ -1649,7 +1723,7 @@ function scrAccount() {
     h('button', { class: 'btn primary wide', onclick: async e => { e.currentTarget.disabled = true; const ok = await sync(true); render(); toast(ok ? 'Everything is up to date' : 'No signal. Your work is safe on this phone.'); } }, 'Send and refresh now'),
     h('div', { class: 'two' }, h('button', { class: 'btn', onclick: () => { S.phase = 'pre'; S.tab = 'learners'; render(); } }, 'Open Pretest'), h('button', { class: 'btn', onclick: () => { S.phase = 'post'; S.tab = 'learners'; render(); } }, 'Open Posttest')),
     h('a', { class: 'btn wide', id: 'linkEngage', href: CONFIG.ENGAGEMENT_URL, target: '_blank', rel: 'noopener' }, 'Open DTR and Accomplishment (ARAL Tutor Engagement)'),
-    h('button', { class: 'btn wide', onclick: () => sheetHelp() }, 'How to use this app'),
+    h('button', { class: 'btn wide', onclick: () => sheetHelp() }, 'How to use this app'), h('button', { class: 'btn wide', id: 'btnMonitorAcc', onclick: () => openMonitor() }, 'Division monitor (PIN)'),
     h('p', { class: 'hint' }, 'When everything has been sent, signing out also removes the learner list from this phone. You get it back when you sign in again.'), h('button', { class: 'btn danger wide', onclick: () => logout(false) }, 'Sign out'),
     h('p', { class: 'hint' }, 'Version ' + CONFIG.VERSION + '. Your work is saved on this phone first and sent when there is signal. Learner names are only in your district sheet; Division reports use learner codes.'));
 }
