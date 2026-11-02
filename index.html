@@ -148,6 +148,7 @@ table.mini{width:100%;border-collapse:collapse;font-size:14px}.mini th,.mini td{
 .passage.small{font-size:17px;line-height:1.55;padding:12px}
 .glist{display:flex;flex-direction:column;gap:8px;max-height:46vh;overflow:auto}.grow{display:grid;grid-template-columns:1fr minmax(150px,200px);gap:6px 10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#fff}.grow.perfect{border-color:var(--sun);background:var(--sun-l)}.grow.redo{border-color:var(--coral);background:var(--coral-l)}.grow.absent{background:#EEF1F6}.gnums{grid-column:1/-1;display:flex;gap:10px}.gnum{display:flex;align-items:center;gap:6px;font-weight:700}.gnum input{width:72px;min-height:40px}
 .startbox{border-left:4px solid var(--sea);background:var(--sea-l);border-radius:10px;padding:10px 14px;margin:8px 0}.startbox ol{margin:6px 0 0 18px;padding:0}.startbox li{margin:3px 0}
+.tries{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:14px;color:var(--ink2)}.tries ul{margin:6px 0 0 18px;padding:0}.tries strong{color:var(--ink)}
 .stat{padding:10px 12px;border-radius:10px;font-weight:700;text-align:center}.stat.perfect{background:var(--sun-l);color:#7A5600}.stat.redo{background:var(--coral-l);color:var(--coral)}
 
 /* report */
@@ -1369,21 +1370,32 @@ function scrSession() {
   });
   return box;
 }
+/* Redo rounds are counted by the app: every earlier try at the same worksheet that was not yet perfect is one redo round */
+function earlierTries(learnerId, dom, set, ws) {
+  return D().tracker.filter(t => t.learner_id === learnerId && t.domain === dom && !Number(t.absent) && String(t.worksheet) === String(ws) && (dom !== 'math' || (entrySet(t) || 1) === set))
+    .sort((a, b) => String(a.date + (a.created_at || '')).localeCompare(String(b.date + (b.created_at || ''))));
+}
+const redoCount = list => list.filter(t => Number(t.tri) || Number(t.circ)).length;
 function sessionPanel(l, date) {
   const dom = S.sdom; const math = dom === 'math'; const lastAny = lastEntry(l.id, dom);
   let setG = math ? ((lastAny && entrySet(lastAny)) || canonSet(Math.min(Number(l.grade) || 1, 10))) : 0;
   const maxWs = () => (math && WS_TITLES[setG] ? WS_TITLES[setG].length - 1 : 999);
   const nextWs = () => { const le = lastEntry(l.id, dom, math ? setG : null); return le ? (Number(le.tri) || Number(le.circ) ? Number(le.worksheet) : Number(le.worksheet) + 1) : 1; };
-  let ws = Math.min(nextWs(), maxWs()); let tri = 0, circ = 0, ret = 0;
+  let ws = Math.min(nextWs(), maxWs()); let tri = 0, circ = 0;
   const val = (get, set, min, max, label) => { const s2 = h('strong', {}, String(get())); return h('div', { class: 'stepper' }, h('span', {}, label), h('button', { class: 'btn', 'aria-label': 'Less ' + label, onclick: () => { set(Math.max(min, get() - 1)); s2.textContent = get(); upd(); } }, '−'), s2, h('button', { class: 'btn', 'aria-label': 'More ' + label, onclick: () => { set(Math.min(max, get() + 1)); s2.textContent = get(); upd(); } }, '+')); };
   const status = h('div', { class: 'stat' }); const upd = () => { status.className = 'stat ' + (tri || circ ? 'redo' : 'perfect'); status.textContent = tri || circ ? 'Needs redo: ' + tri + ' △  ' + circ + ' ○' : '★ Perfect, all items correct'; }; upd();
-  const wsNum = h('strong', {}, String(ws)); const wsTitle = h('div', { class: 'wstitle' });
-  const showWs = () => { wsNum.textContent = ws; const t = math && WS_TITLES[setG] ? WS_TITLES[setG][ws] : ''; wsTitle.textContent = t || ''; wsTitle.hidden = !t; };
+  const wsNum = h('strong', {}, String(ws)); const wsTitle = h('div', { class: 'wstitle' }); const tries = h('div', { class: 'tries' });
+  const showTries = () => {
+    const prev = earlierTries(l.id, dom, math ? setG : 1, ws); const n = redoCount(prev); tries.innerHTML = '';
+    if (!prev.length) { tries.append(h('span', {}, 'First try on this worksheet.')); return; }
+    tries.append(h('strong', {}, n ? 'Redo round ' + n + ' (counted automatically)' : 'This worksheet was already \u2605 perfect'), h('ul', {}, prev.map((t, i) => h('li', {}, 'Try ' + (i + 1) + ', ' + t.date + ': ' + (Number(t.tri) || Number(t.circ) ? t.tri + ' \u25B3, ' + t.circ + ' \u25CB' : '\u2605 perfect')))));
+  };
+  const showWs = () => { showTries(); wsNum.textContent = ws; const t = math && WS_TITLES[setG] ? WS_TITLES[setG][ws] : ''; wsTitle.textContent = t || ''; wsTitle.hidden = !t; };
   const wsRow = h('div', { class: 'stepper' }, h('span', {}, 'Worksheet no.'), h('button', { class: 'btn', 'aria-label': 'Previous worksheet', onclick: () => { ws = Math.max(1, ws - 1); showWs(); } }, '−'), wsNum, h('button', { class: 'btn', 'aria-label': 'Next worksheet', onclick: () => { ws = Math.min(maxWs(), ws + 1); showWs(); } }, '+'));
   showWs();
   const setSel = math ? h('label', { class: 'fld' }, h('span', {}, 'Worksheet set (ARAL Math)'), h('select', { id: 'wsSet', onchange: e => { setG = Number(e.target.value); ws = Math.min(nextWs(), maxWs()); showWs(); } }, [1, 2, 3, 4, 5, 6, 7, 9].map(g => h('option', { value: g, selected: g === setG }, g === 7 ? 'Grades 7 and 8' : g === 9 ? 'Grades 9 and 10' : 'Grade ' + g)))) : null;
-  const mk = absent => addOp('tracker', { entry_id: uid(), learner_id: l.id, tutor_id: P.session.tutor_id, date, domain: dom, worksheet: absent ? '' : ws, tri: absent ? 0 : tri, circ: absent ? 0 : circ, retries: absent ? 0 : ret, absent: absent ? 1 : 0, note: math ? 'set:G' + setG : '', created_at: new Date().toISOString() });
-  return h('div', { class: 'spanel' }, startHint(l), setSel, wsRow, wsTitle, val(() => tri, v => { tri = v; }, 0, 99, '△ partly correct'), val(() => circ, v => { circ = v; }, 0, 99, '○ wrong'), val(() => ret, v => { ret = v; }, 0, 20, 'Redo rounds'), status,
+  const mk = absent => addOp('tracker', { entry_id: uid(), learner_id: l.id, tutor_id: P.session.tutor_id, date, domain: dom, worksheet: absent ? '' : ws, tri: absent ? 0 : tri, circ: absent ? 0 : circ, retries: absent ? 0 : redoCount(earlierTries(l.id, dom, math ? setG : 1, ws)), absent: absent ? 1 : 0, note: math ? 'set:G' + setG : '', created_at: new Date().toISOString() });
+  return h('div', { class: 'spanel' }, startHint(l), setSel, wsRow, wsTitle, val(() => tri, v => { tri = v; }, 0, 99, '△ partly correct'), val(() => circ, v => { circ = v; }, 0, 99, '○ wrong'), tries, status,
     h('div', { class: 'two' }, h('button', { class: 'btn', onclick: () => { mk(true); S.openRow = null; render(); toast(l.name + ' marked absent'); } }, 'Absent'), h('button', { class: 'btn primary', onclick: () => { mk(false); S.openRow = null; render(); toast('Saved worksheet ' + ws); } }, 'Save worksheet')));
 }
 
@@ -1419,7 +1431,7 @@ function sheetGroupLog(date) {
       msg.textContent = ''; const c = counts(); if (c.perfect + c.redo + c.absent === 0) { msg.textContent = 'Choose a result for at least one learner.'; return; }
       if (rows.some(r => r.st === 'redo' && !r.tri && !r.circ)) { msg.textContent = 'For “Needs redo”, enter how many △ or ○ the learner has.'; return; }
       let n = 0; rows.forEach(r => { if (r.st === 'skip') return; const ab = r.st === 'absent';
-        addOp('tracker', { entry_id: uid(), learner_id: r.l.id, tutor_id: P.session.tutor_id, date, domain: dom, worksheet: ab ? '' : ws, tri: ab || r.st === 'perfect' ? 0 : r.tri, circ: ab || r.st === 'perfect' ? 0 : r.circ, retries: 0, absent: ab ? 1 : 0, note: math ? 'set:G' + setG : '', created_at: new Date().toISOString() }); n++; });
+        addOp('tracker', { entry_id: uid(), learner_id: r.l.id, tutor_id: P.session.tutor_id, date, domain: dom, worksheet: ab ? '' : ws, tri: ab || r.st === 'perfect' ? 0 : r.tri, circ: ab || r.st === 'perfect' ? 0 : r.circ, retries: ab ? 0 : redoCount(earlierTries(r.l.id, dom, math ? setG : 1, ws)), absent: ab ? 1 : 0, note: math ? 'set:G' + setG : '', created_at: new Date().toISOString() }); n++; });
       closeSheet(); S.openRow = null; render(); toast(n + ' entries saved');
     } }, 'Save for the group')));
 }
