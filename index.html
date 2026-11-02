@@ -1225,6 +1225,7 @@ function sheetReadLaunch(id) {
       ? 'For beginning readers, like the ARAL-Reading check-in: the learner reads aloud one task at a time (letters, syllables, words, phrases, sentences, then two questions). Tap each item read correctly and it turns green. A timer runs from Start. Finish all tasks even if there are mistakes.'
       : 'For learners who already read sentences: the learner reads a short passage aloud (you count the mistakes and the time), then you ask four questions' + (Number(l.grade) >= 7 ? ' (junior high passage: word meaning, conclusion, author’s purpose, fact or opinion)' : ' (detail, word meaning, cause and effect, conclusion)') + '. Choose the tool at the pretest and use it again at the posttest.');
     warn.innerHTML = ''; const have = D().results[rkey(id, 'reading_' + lang, phase)]; if (have) warn.append(h('p', { class: 'warn' }, 'Already has a ' + phaseLabel(phase).toLowerCase() + ' reading result (' + resLine(have) + '). Starting again replaces it.'));
+    const took = ['en', 'fil'].filter(k => D().results[rkey(id, 'reading_' + k, phase)]).map(k => (k === 'en' ? 'English' : 'Filipino')); if (took.length && !have) warn.append(h('p', { class: 'hint' }, 'Already taken in ' + took.join(' and ') + '. You can also take it in ' + (lang === 'en' ? 'English' : 'Filipino') + '.'));
     if (phase === 'post' && !D().results[rkey(id, 'reading_' + lang, 'pre')]) warn.append(h('p', { class: 'warn' }, 'No ' + (lang === 'en' ? 'English' : 'Filipino') + ' pretest is on file for this learner, so this posttest will not count toward the gain.'));
   }; upd();
   openSheet(h('div', { class: 'stack' }, h('h2', {}, 'Reading ' + phaseLabel(phase).toLowerCase()), h('p', { class: 'sub' }, l.name + ' · Grade ' + l.grade + ' · Form ' + (phase === 'pre' ? 'A' : 'B')),
@@ -1290,10 +1291,11 @@ function finishReading(R, sc, stopFn) {
     key: rkey(R.l.id, 'reading_' + R.lang, R.phase), learner_id: R.l.id, tutor_id: P.session.tutor_id, school: R.l.school, grade: R.l.grade, domain: 'reading_' + R.lang, phase: R.phase, form: R.form, test_level: '',
     answers, raw: sc.raw, total: sc.total, pct: sc.pct, reading_level: level, fluency: '', mic_n: micN, mic_agree: micAgree, lang: R.lang, mode: 'tutor', date: todayISO(), duration_s: secs
   };
+  const suggestTrack = ksOf(R.l.grade) > 1 ? (level >= 5 ? 'Suggested program: Plus, because the learner reads sentences. The tutor decides.' : 'Suggested program: Basic, to build letters, words, and sentences first. The tutor decides.') : null;
   const focusMap = { 1: 'letter names and sounds', 2: 'syllables', 3: 'reading short words', 4: 'phrases', 5: 'sentences', 6: 'answering questions about what was read' }; const firstGap = KS1_TASKS.find(t => sc.per[t.id] < passNeed(t.n)); const focusLine = firstGap ? 'Where to start: ' + focusMap[firstGap.id] + ' (Task ' + firstGap.id + ').' : 'Where to start: short paragraphs and longer texts. Consider the Plus guide.';
   const mastered = level === 0 ? 'No task mastered yet' : level >= 7 ? 'All tasks mastered, paragraph included' : 'Mastered up to Task ' + level + ' (' + KS1_TASKS[level - 1].name + ')';
   const wrap = h('div', { class: 'tview' });
-  wrap.append(h('div', { class: 'tbody scroll' }, h('div', { class: 'score' }, sc.raw === sc.total ? h('span', { class: 'star', 'aria-hidden': 'true' }, '★') : null, h('div', { class: 'big' }, sc.raw + ' / ' + sc.total), h('p', {}, R.l.name + ' · ' + KS1[R.lang].label + ' · ' + Math.round(sc.pct) + '%'), h('p', {}, mastered), h('p', { class: 'sub' }, focusLine)),
+  wrap.append(h('div', { class: 'tbody scroll' }, h('div', { class: 'score' }, sc.raw === sc.total ? h('span', { class: 'star', 'aria-hidden': 'true' }, '★') : null, h('div', { class: 'big' }, sc.raw + ' / ' + sc.total), h('p', {}, R.l.name + ' · ' + KS1[R.lang].label + ' · ' + Math.round(sc.pct) + '%'), h('p', {}, mastered), h('p', { class: 'sub' }, focusLine), suggestTrack ? h('p', { class: 'sub', id: 'suggestTrack' }, suggestTrack) : null),
     h('div', { class: 'ladder' }, KS1_TASKS.map(t => h('div', { class: 'rung ' + (sc.per[t.id] >= passNeed(t.n) ? 'good' : 'bad') }, h('b', {}, t.id), h('span', {}, t.name), h('em', {}, sc.per[t.id] + ' / ' + t.n))), R.para ? h('div', { class: 'rung ' + (paraOk ? 'good' : 'bad') }, h('b', {}, 7), h('span', {}, 'Paragraph'), h('em', {}, paraOk ? 'passed' : 'not yet')) : null),
     h('p', { class: 'sub' }, 'Time: ' + Math.floor(secs / 60) + ':' + String(secs % 60).padStart(2, '0') + (micN ? ' · The microphone agreed with your ticks on ' + micAgree + ' of ' + micN + ' items.' : '')),
     h('label', { class: 'fld' }, h('span', {}, 'Ask the learner: how sure are you about reading? (optional)'), conf)),
@@ -1331,7 +1333,7 @@ function runPassage(l, phase, lang, ks) {
   openTest(wrap); draw();
 }
 function finishPassage(R, l, phase, lang, form, words, ks) {
-  const correct = R.marks.reduce((a, b) => a + b, 0); const sc = scorePassage(words, R.miscues, R.secs, correct); const missedTypes = (ks === 3 ? PLUS3 : PLUS)[lang][form].qs.filter((q, i) => !R.marks[i]).map(q => q[2]); setKey(null);
+  const correct = R.marks.reduce((a, b) => a + b, 0); const sc = scorePassage(words, R.miscues, R.secs, correct); const suggestPlus = ksOf(l.grade) > 1 ? (sc.acc >= 90 && correct >= 2 ? 'Suggested program: Plus, because the learner reads the passage well. The tutor decides.' : 'Suggested program: Basic, to strengthen reading before the Plus lessons. The tutor decides.') : null; const missedTypes = (ks === 3 ? PLUS3 : PLUS)[lang][form].qs.filter((q, i) => !R.marks[i]).map(q => q[2]); setKey(null);
   const res = {
     key: rkey(l.id, 'reading_' + lang, phase), learner_id: l.id, tutor_id: P.session.tutor_id, school: l.school, grade: l.grade, domain: 'reading_' + lang, phase, form, test_level: ks,
     answers: 'PR:m' + R.miscues + ';T:' + R.secs + ';Q:' + R.marks.join(''), raw: correct, total: 4, pct: sc.pct, reading_level: correct, fluency: sc.wcpm, mic_n: '', mic_agree: '', lang, mode: 'passage', date: todayISO(), duration_s: R.secs
@@ -1339,7 +1341,7 @@ function finishPassage(R, l, phase, lang, form, words, ks) {
   const wrap = h('div', { class: 'tview' });
   wrap.append(h('div', { class: 'tbody scroll' }, h('div', { class: 'score' }, sc.pct >= 100 ? h('span', { class: 'star', 'aria-hidden': 'true' }, '★') : null, h('div', { class: 'big' }, Math.round(sc.pct) + '%'), h('p', {}, l.name + ' · ' + KS1[lang].label + ' · Passage')),
     h('div', { class: 'ladder' }, h('div', { class: 'rung ' + (sc.acc >= 90 ? 'good' : 'bad') }, h('b', {}, '1'), h('span', {}, 'Reading accuracy'), h('em', {}, Math.round(sc.acc) + '%')), h('div', { class: 'rung ' + (correct >= 3 ? 'good' : 'bad') }, h('b', {}, '2'), h('span', {}, 'Questions'), h('em', {}, correct + ' / 4')), h('div', { class: 'rung skip' }, h('b', {}, '3'), h('span', {}, 'Words correct per minute'), h('em', {}, String(sc.wcpm)))),
-    missedTypes.length ? h('p', { class: 'sub' }, 'Practice next: ' + missedTypes.join(', ').toLowerCase() + '.') : null, h('p', { class: 'sub' }, 'The score is half reading accuracy and half questions. Words per minute is recorded separately.')),
+    suggestPlus ? h('p', { class: 'sub', id: 'suggestTrack' }, suggestPlus) : null, missedTypes.length ? h('p', { class: 'sub' }, 'Practice next: ' + missedTypes.join(', ').toLowerCase() + '.') : null, h('p', { class: 'sub' }, 'The score is half reading accuracy and half questions. Words per minute is recorded separately.')),
     h('div', { class: 'tfoot' }, h('button', { class: 'btn', onclick: () => runPassage(l, phase, lang, ks) }, 'Redo'), h('button', { class: 'btn primary', id: 'btnSavePass', onclick: () => { addOp('result', res); toast('Saved'); closeTest(); } }, 'Save result')));
   openTest(wrap);
 }
@@ -1349,7 +1351,23 @@ function finishPassage(R, l, phase, lang, form, words, ks) {
 const canonSet = g => (g === 8 ? 7 : g === 10 ? 9 : g);
 const setLabel = n => (n === 7 ? 'G7-8' : n === 9 ? 'G9-10' : 'G' + n);
 const entrySet = t => { const m = /set:G(\d+)/.exec(t.note || ''); return m ? canonSet(Number(m[1])) : null; };
-const wsLabel = t => (t.domain === 'math' ? setLabel(entrySet(t) || 1) + ' WS ' : 'WS ') + t.worksheet;
+/* Reading sessions: Key Stage 1 is counted by session number; Basic and Plus (Key Stages 2 and 3) by week (1 to 8) and session (1 to 4) */
+const ksOf = g => (Number(g) <= 3 ? 1 : Number(g) <= 6 ? 2 : 3);
+const trackOf = t => { const m = /track:(\w+)/.exec(t.note || ''); return m ? m[1] : null; };
+const readSeq = (track, wk, ss, num) => (track === 'KS1' ? num : (wk - 1) * 4 + ss);
+const readNote = (track, wk, ss) => 'track:' + track + (track === 'KS1' ? '' : ';wk:' + wk + ';s:' + ss);
+function readLabel(t) {
+  const tr = trackOf(t); const l = learnerById(t.learner_id) || {}; if (!tr) return 'Session ' + t.worksheet; if (tr === 'KS1') return 'KS1 S' + t.worksheet;
+  const m = /wk:(\d+);s:(\d+)/.exec(t.note || ''); return 'KS' + ksOf(l.grade) + ' ' + tr + (m ? ' W' + m[1] + ' S' + m[2] : ' S' + t.worksheet);
+}
+function posFromSeq(track, n) { if (track === 'KS1') return { wk: 1, ss: 1, num: Math.max(1, Math.min(n, 40)) }; const c = Math.max(1, Math.min(n, 32)); return { wk: Math.floor((c - 1) / 4) + 1, ss: ((c - 1) % 4) + 1, num: 1 }; }
+function nextRead(le, track) { return !le || trackOf(le) !== track ? posFromSeq(track, 1) : posFromSeq(track, Number(le.worksheet) + 1); }
+/* Which program the learner is in: Grades 1 to 3 use Key Stage 1; from Grade 4 the tutor chooses Basic or Plus, and the pretest tool gives the first guess */
+function trackFor(l) {
+  if (ksOf(l.grade) === 1) return 'KS1'; const last = lastEntry(l.id, 'reading'); const tr = last && trackOf(last); if (tr === 'Basic' || tr === 'Plus') return tr;
+  const R = resultsFor(l.id); const pre = (R.reading_en && R.reading_en.pre) || (R.reading_fil && R.reading_fil.pre); return pre && pre.mode === 'passage' ? 'Plus' : 'Basic';
+}
+const wsLabel = t => (t.domain === 'math' ? setLabel(entrySet(t) || 1) + ' WS ' + t.worksheet : readLabel(t));
 function lastEntry(lid, dom, set) { const e = D().tracker.filter(t => t.learner_id === lid && t.domain === dom && !Number(t.absent) && (set == null || (entrySet(t) || 1) === set)).sort((a, b) => (a.date + a.created_at < b.date + b.created_at ? -1 : 1)); return e[e.length - 1]; }
 function scrSession() {
   const date = S.date || todayISO(); const box = h('div', { class: 'stack' });
@@ -1365,7 +1383,7 @@ function scrSession() {
     const open = S.openRow === l.id;
     box.append(h('div', { class: 'srow' + (open ? ' open' : '') },
       h('button', { class: 'shead', onclick: () => { S.openRow = open ? null : l.id; render(); } }, h('span', { class: 'av ' + (l.group === 'pullout' ? 'pull' : '') }, initials(l.name)), h('span', { class: 'rn' }, h('strong', {}, l.name), h('small', {}, le ? 'Last: ' + wsLabel(le) + (Number(le.tri) || Number(le.circ) ? ' (needs redo)' : ' ★') : 'No entries yet')),
-        h('span', { class: 'chips' }, absent ? h('i', { class: 'chip bad' }, 'Absent') : mine.length ? h('i', { class: 'chip ok' }, stars + '★ ' + (mine.length - stars) + ' redo') : null)),
+        h('span', { class: 'chips' }, absent ? h('i', { class: 'chip bad' }, 'Absent') : mine.length ? h('i', { class: 'chip ok' }, S.sdom === 'reading' ? 'Present' : stars + '\u2605 ' + (mine.length - stars) + ' redo') : null)),
       open ? sessionPanel(l, date) : null));
   });
   return box;
@@ -1377,6 +1395,7 @@ function earlierTries(learnerId, dom, set, ws) {
 }
 const redoCount = list => list.filter(t => Number(t.tri) || Number(t.circ)).length;
 function sessionPanel(l, date) {
+  if (S.sdom === 'reading') return readingPanel(l, date);
   const dom = S.sdom; const math = dom === 'math'; const lastAny = lastEntry(l.id, dom);
   let setG = math ? ((lastAny && entrySet(lastAny)) || canonSet(Math.min(Number(l.grade) || 1, 10))) : 0;
   const maxWs = () => (math && WS_TITLES[setG] ? WS_TITLES[setG].length - 1 : 999);
@@ -1401,6 +1420,7 @@ function sessionPanel(l, date) {
 
 /* One tap per learner: the same worksheet for the whole group, with exceptions (needs redo or absent) */
 function sheetGroupLog(date) {
+  if (S.sdom === 'reading') return sheetGroupLogReading(date);
   const dom = S.sdom; const math = dom === 'math'; const L = activeLearners();
   if (!L.length) { toast('Add learners first.'); return; }
   const grades = {}; L.forEach(l => { const g = canonSet(Math.min(Number(l.grade) || 1, 10)); grades[g] = (grades[g] || 0) + 1; });
@@ -1436,44 +1456,90 @@ function sheetGroupLog(date) {
     } }, 'Save for the group')));
 }
 
+function stepperRow(label, get, set, min, max) {
+  const s2 = h('strong', {}, String(get()));
+  return h('div', { class: 'stepper' }, h('span', {}, label), h('button', { class: 'btn', 'aria-label': 'Less ' + label, onclick: () => { set(Math.max(min, get() - 1)); s2.textContent = get(); } }, '\u2212'), s2, h('button', { class: 'btn', 'aria-label': 'More ' + label, onclick: () => { set(Math.min(max, get() + 1)); s2.textContent = get(); } }, '+'));
+}
+function readingPanel(l, date) {
+  const ks = ksOf(l.grade); let track = trackFor(l); const last = lastEntry(l.id, 'reading'); let pos = nextRead(last, track);
+  const posBox = h('div', { class: 'stack' }); const info = h('p', { class: 'hint' });
+  const drawPos = () => {
+    posBox.innerHTML = ''; if (track === 'KS1') posBox.append(stepperRow('Session no.', () => pos.num, v => { pos.num = v; }, 1, 40)); else posBox.append(stepperRow('Week', () => pos.wk, v => { pos.wk = v; }, 1, 8), stepperRow('Session', () => pos.ss, v => { pos.ss = v; }, 1, 4));
+    const lt = last && trackOf(last); info.textContent = lt && lt !== track ? 'This learner was in ' + lt + '. Counting starts again at Week 1 Session 1 in ' + track + '.' : (last ? 'Last: ' + readLabel(last) + '.' : 'First reading session.');
+  };
+  const seg = ks > 1 ? h('div', { class: 'seg', id: 'trackSeg' }, ['Basic', 'Plus'].map(k => h('button', { id: 'track_' + k, class: track === k ? 'on' : '', onclick: () => { track = k; pos = nextRead(last, track); [...seg.children].forEach(c => c.classList.toggle('on', c.id === 'track_' + k)); drawPos(); } }, k))) : h('p', { class: 'sub' }, 'Key Stage 1 (Grades 1 to 3)');
+  drawPos();
+  const mk = absent => addOp('tracker', { entry_id: uid(), learner_id: l.id, tutor_id: P.session.tutor_id, date, domain: 'reading', worksheet: absent ? '' : readSeq(track, pos.wk, pos.ss, pos.num), tri: 0, circ: 0, retries: 0, absent: absent ? 1 : 0, note: readNote(track, pos.wk, pos.ss), created_at: new Date().toISOString() });
+  return h('div', { class: 'spanel' }, h('label', { class: 'fld' }, h('span', {}, ks > 1 ? 'Reading program' : 'Reading'), seg), posBox, info,
+    h('div', { class: 'two' }, h('button', { class: 'btn', onclick: () => { mk(true); S.openRow = null; render(); toast(l.name + ' marked absent'); } }, 'Absent'), h('button', { class: 'btn primary', id: 'btnSaveReading', onclick: () => { mk(false); S.openRow = null; render(); toast('Saved reading session'); } }, 'Save session')));
+}
+function sheetGroupLogReading(date) {
+  const L = activeLearners(); if (!L.length) { toast('Add learners first.'); return; }
+  const plus = L.filter(l => trackFor(l) === 'Plus').length; let track = L.every(l => ksOf(l.grade) === 1) ? 'KS1' : (plus > L.length / 2 ? 'Plus' : 'Basic');
+  const guess = () => { const c = {}; L.filter(l => trackFor(l) === track || track === 'KS1').forEach(l => { const p = nextRead(lastEntry(l.id, 'reading'), track); const n = readSeq(track, p.wk, p.ss, p.num); c[n] = (c[n] || 0) + 1; }); const k = Object.keys(c).sort((a, b) => c[b] - c[a])[0]; return posFromSeq(track, Number(k || 1)); };
+  let pos = guess(); const rows = L.map(l => ({ l, st: 'skip' })); const posBox = h('div', { class: 'stack' }); const list = h('div', { class: 'glist' }); const sum = h('p', { class: 'sub' }); const msg = h('p', { class: 'err', role: 'alert' });
+  const drawPos = () => { posBox.innerHTML = ''; if (track === 'KS1') posBox.append(stepperRow('Session no.', () => pos.num, v => { pos.num = v; }, 1, 40)); else posBox.append(stepperRow('Week', () => pos.wk, v => { pos.wk = v; }, 1, 8), stepperRow('Session', () => pos.ss, v => { pos.ss = v; }, 1, 4)); };
+  const draw = () => {
+    list.innerHTML = '';
+    rows.forEach(r => { const sel = h('select', { 'aria-label': 'Result for ' + r.l.name, onchange: e => { r.st = e.target.value; draw(); } }, [['skip', 'Skip (no entry)'], ['perfect', 'Present'], ['absent', 'Absent']].map(([v, t]) => h('option', { value: v, selected: r.st === v }, t)));
+      list.append(h('div', { class: 'grow ' + r.st }, h('span', {}, h('strong', {}, r.l.name), h('small', {}, '  Gr ' + r.l.grade + ' \u00B7 ' + trackFor(r.l))), sel)); });
+    const c = { perfect: 0, absent: 0, skip: 0 }; rows.forEach(r => { c[r.st]++; }); sum.textContent = c.perfect + ' present \u00B7 ' + c.absent + ' absent \u00B7 ' + c.skip + ' skipped';
+  };
+  const seg = h('div', { class: 'seg', id: 'gTrack' }, [['KS1', 'Key Stage 1'], ['Basic', 'Basic'], ['Plus', 'Plus']].map(([k, t]) => h('button', { id: 'gt_' + k, class: track === k ? 'on' : '', onclick: () => { track = k; pos = guess(); [...seg.children].forEach(c => c.classList.toggle('on', c.id === 'gt_' + k)); drawPos(); } }, t)));
+  drawPos(); draw();
+  openSheet(h('div', { class: 'stack' }, h('h2', {}, 'Log the whole group'), h('p', { class: 'sub' }, 'Reading \u00B7 ' + date + '. Same program, week, and session for everyone you mark. Skip learners who were in a different program today.'),
+    h('label', { class: 'fld' }, h('span', {}, 'Reading program'), seg), posBox, h('div', { class: 'two' }, h('button', { class: 'btn', id: 'gAllStar', onclick: () => { rows.forEach(r => { r.st = 'perfect'; }); draw(); } }, 'Everyone present'), h('button', { class: 'btn', onclick: () => { rows.forEach(r => { r.st = 'skip'; }); draw(); } }, 'Clear all')), list, sum, msg,
+    h('button', { class: 'btn primary wide', id: 'gSave', onclick: () => {
+      msg.textContent = ''; if (rows.every(r => r.st === 'skip')) { msg.textContent = 'Choose a result for at least one learner.'; return; }
+      let n = 0; rows.forEach(r => { if (r.st === 'skip') return; const ab = r.st === 'absent'; addOp('tracker', { entry_id: uid(), learner_id: r.l.id, tutor_id: P.session.tutor_id, date, domain: 'reading', worksheet: ab ? '' : readSeq(track, pos.wk, pos.ss, pos.num), tri: 0, circ: 0, retries: 0, absent: ab ? 1 : 0, note: readNote(track, pos.wk, pos.ss), created_at: new Date().toISOString() }); n++; });
+      closeSheet(); S.openRow = null; render(); toast(n + ' entries saved');
+    } }, 'Save for the group')));
+}
+
 /* ================= REPORT ================= */
 function metrics() {
   const rows = activeLearners().map(l => {
-    const R = resultsFor(l.id); const n = R.numeracy || {}; const rd = R.reading_en && R.reading_en.pre ? 'reading_en' : R.reading_fil && R.reading_fil.pre ? 'reading_fil' : (R.reading_en ? 'reading_en' : R.reading_fil ? 'reading_fil' : null);
-    const r = rd ? R[rd] : {}; const tr = D().tracker.filter(t => t.learner_id === l.id);
+    const R = resultsFor(l.id); const n = R.numeracy || {}; const pr = x => (x ? { pre: x.pre ? x.pre.pct : null, post: x.post ? x.post.pct : null } : null);
+    const rLangs = [['EN', 'English', pr(R.reading_en)], ['FIL', 'Filipino', pr(R.reading_fil)]].filter(x => x[2] && (x[2].pre != null || x[2].post != null)).map(x => ({ code: x[0], name: x[1], pre: x[2].pre, post: x[2].post }));
+    const tr = D().tracker.filter(t => t.learner_id === l.id);
+    const rt = tr.filter(t => t.domain === 'reading').sort((a, b) => (a.date + a.created_at < b.date + b.created_at ? -1 : 1)); const tks = rt.map(trackOf).filter(Boolean); const tn = k => (k === 'KS1' ? 'KS1' : 'KS' + ksOf(l.grade) + ' ' + k);
+    const trackFirst = tks.length ? tn(tks[0]) : ''; const trackLatest = tks.length ? tn(tks[tks.length - 1]) : ''; const trackTxt = !tks.length ? '\u2014' : trackFirst === trackLatest ? trackLatest : trackFirst + ' \u2192 ' + trackLatest; const presentRead = rt.filter(t => !Number(t.absent)); const readLast = presentRead.length ? readLabel(presentRead[presentRead.length - 1]) : '';
     const mx = d => Math.max(0, ...tr.filter(t => t.domain === d && !Number(t.absent) && t.worksheet !== '').map(t => Number(t.worksheet)));
     const mxMath = (() => { let best = 0; tr.forEach(t => { if (t.domain === 'math' && !Number(t.absent) && t.worksheet !== '') best = Math.max(best, (entrySet(t) || 1) * 1000 + Number(t.worksheet)); }); return best ? setLabel(Math.floor(best / 1000)) + '-' + (best % 1000) : ''; })();
     const days = new Set(tr.filter(t => !Number(t.absent)).map(t => t.date)).size; const abs = new Set(tr.filter(t => Number(t.absent)).map(t => t.date)).size;
-    return { l, nPre: n.pre ? n.pre.pct : null, nPost: n.post ? n.post.pct : null, rLang: rd, rPre: r.pre ? r.pre.pct : null, rPost: r.post ? r.post.pct : null, wsMath: mxMath, wsRead: mx('reading'), days, abs };
+    return { l, nPre: n.pre ? n.pre.pct : null, nPost: n.post ? n.post.pct : null, rLangs, trackFirst, trackLatest, trackTxt, readPresent: presentRead.length, readLast, wsMath: mxMath, wsRead: mx('reading'), days, abs };
   });
   return rows;
 }
 const avg = a => (a.length ? round1(a.reduce((x, y) => x + y, 0) / a.length) : null);
 function scrReport() {
   const rows = metrics(); const box = h('div', { class: 'stack' });
-  const nPairs = rows.filter(r => r.nPre != null && r.nPost != null); const rPairs = rows.filter(r => r.rPre != null && r.rPost != null);
-  const nGain = avg(nPairs.map(r => r.nPost - r.nPre)); const rGain = avg(rPairs.map(r => r.rPost - r.rPre));
+  const nPairs = rows.filter(r => r.nPre != null && r.nPost != null); const rPairs = []; rows.forEach(r => r.rLangs.forEach(x => { if (x.pre != null && x.post != null) rPairs.push(x); }));
+  const nGain = avg(nPairs.map(r => r.nPost - r.nPre)); const rGain = avg(rPairs.map(r => r.post - r.pre));
   const card = (t, v, s) => h('div', { class: 'stat-card' }, h('small', {}, t), h('strong', {}, v), h('span', {}, s));
   box.append(h('h2', {}, 'My learners’ progress'),
-    h('div', { class: 'cards' }, card('Numeracy gain', nGain == null ? '—' : (nGain > 0 ? '+' : '') + nGain + ' pts', nPairs.length + ' learners with both tests'), card('Reading gain', rGain == null ? '—' : (rGain > 0 ? '+' : '') + rGain + ' pts', rPairs.length + ' learners with both tests'),
-      card('Improved in numeracy', nPairs.length ? Math.round(nPairs.filter(r => r.nPost > r.nPre).length / nPairs.length * 100) + '%' : '—', 'scored higher on the posttest'), card('Improved in reading', rPairs.length ? Math.round(rPairs.filter(r => r.rPost > r.rPre).length / rPairs.length * 100) + '%' : '—', 'scored higher on the posttest')),
+    h('div', { class: 'cards' }, card('Numeracy gain', nGain == null ? '—' : (nGain > 0 ? '+' : '') + nGain + ' pts', nPairs.length + ' learners with both tests'), card('Reading gain', rGain == null ? '—' : (rGain > 0 ? '+' : '') + rGain + ' pts', rPairs.length + ' results with both tests'),
+      card('Improved in numeracy', nPairs.length ? Math.round(nPairs.filter(r => r.nPost > r.nPre).length / nPairs.length * 100) + '%' : '—', 'scored higher on the posttest'), card('Improved in reading', rPairs.length ? Math.round(rPairs.filter(r => r.post > r.pre).length / rPairs.length * 100) + '%' : '—', 'scored higher on the posttest')),
     h('div', { class: 'two' }, h('button', { class: 'btn', onclick: downloadCSV }, 'Download CSV'), h('button', { class: 'btn primary', onclick: printReport }, 'Print or save as PDF')));
   if (!rows.length) box.append(h('p', { class: 'sub' }, 'Add learners and run the pretest to see progress here.'));
   else box.append(h('div', { class: 'scrollx' }, reportTable(rows)));
-  box.append(h('p', { class: 'hint' }, 'Gains are in percentage points of items read or answered correctly. Reports are built on this phone, so nothing extra is stored online.'));
+  box.append(h('p', { class: 'hint' }, 'A learner who took reading in English and in Filipino shows both (EN, FIL). Gains are in percentage points of items read or answered correctly. Reports are built on this phone, so nothing extra is stored online.'));
   return box;
 }
 function fmtGain(a, b, u) { if (a == null || b == null) return '—'; const g = round1(b - a); return (g > 0 ? '+' : '') + g + (u || ''); }
 function reportTable(rows) {
-  return h('table', { class: 'rep' }, h('thead', {}, h('tr', {}, ['Learner', 'Gr', 'Num pre', 'Num post', 'Gain', 'Read pre', 'Read post', 'Gain', 'WS math', 'Days'].map(t => h('th', {}, t)))),
+  return h('table', { class: 'rep' }, h('thead', {}, h('tr', {}, ['Learner', 'Gr', 'Num pre', 'Num post', 'Gain', 'Read pre', 'Read post', 'Gain', 'Reading program', 'WS math', 'Days'].map(t => h('th', {}, t)))),
     h('tbody', {}, rows.map(r => h('tr', {}, h('th', {}, r.l.name), h('td', {}, r.l.grade), h('td', {}, r.nPre == null ? '—' : Math.round(r.nPre) + '%'), h('td', {}, r.nPost == null ? '—' : Math.round(r.nPost) + '%'), h('td', { class: gainCls(r.nPre, r.nPost) }, fmtGain(r.nPre, r.nPost)),
-      h('td', {}, r.rPre == null ? '—' : Math.round(r.rPre) + '%'), h('td', {}, r.rPost == null ? '—' : Math.round(r.rPost) + '%'), h('td', { class: gainCls(r.rPre, r.rPost) }, fmtGain(r.rPre, r.rPost)), h('td', {}, r.wsMath || '—'), h('td', {}, r.days)))));
+      readCell(r, x => (x.pre == null ? '\u2014' : Math.round(x.pre) + '%')), readCell(r, x => (x.post == null ? '\u2014' : Math.round(x.post) + '%')), readCell(r, x => fmtGain(x.pre, x.post), true), h('td', {}, r.trackTxt), h('td', {}, r.wsMath || '—'), h('td', {}, r.days)))));
 }
+/* One line per reading language; a learner who took both English and Filipino shows both */
+function readCell(r, f, gain) { if (!r.rLangs.length) return h('td', {}, '\u2014'); const two = r.rLangs.length > 1; return h('td', {}, r.rLangs.map(x => h('div', { class: gain ? gainCls(x.pre, x.post) : '' }, (two ? x.code + ' ' : '') + f(x)))); }
 const gainCls = (a, b) => (a == null || b == null ? '' : b > a ? 'up' : b < a ? 'down' : '');
 function csvCell(v) { v = v == null ? '' : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+function csvRead(r, code) { const x = r.rLangs.find(y => y.code === code); return x ? [x.pre == null ? '' : round1(x.pre), x.post == null ? '' : round1(x.post), x.pre != null && x.post != null ? round1(x.post - x.pre) : ''] : ['', '', '']; }
 function downloadCSV() {
-  const head = ['learner_code', 'name', 'school', 'grade', 'group', 'numeracy_pre_pct', 'numeracy_post_pct', 'numeracy_gain', 'reading_language', 'reading_pre_pct', 'reading_post_pct', 'reading_gain', 'max_math_worksheet', 'max_reading_worksheet', 'days_present', 'days_absent'];
-  const lines = [head.join(',')]; metrics().forEach(r => lines.push([r.l.id, r.l.name, r.l.school, r.l.grade, r.l.group, r.nPre == null ? '' : round1(r.nPre), r.nPost == null ? '' : round1(r.nPost), r.nPre != null && r.nPost != null ? round1(r.nPost - r.nPre) : '', r.rLang || '', r.rPre == null ? '' : round1(r.rPre), r.rPost == null ? '' : round1(r.rPost), r.rPre != null && r.rPost != null ? round1(r.rPost - r.rPre) : '', r.wsMath || '', r.wsRead || '', r.days, r.abs].map(csvCell).join(',')));
+  const head = ['learner_code', 'name', 'school', 'grade', 'group', 'numeracy_pre_pct', 'numeracy_post_pct', 'numeracy_gain', 'reading_en_pre_pct', 'reading_en_post_pct', 'reading_en_gain', 'reading_fil_pre_pct', 'reading_fil_post_pct', 'reading_fil_gain', 'reading_program_first', 'reading_program_latest', 'reading_sessions_present', 'reading_last_session', 'max_math_worksheet', 'max_reading_worksheet', 'days_present', 'days_absent'];
+  const lines = [head.join(',')]; metrics().forEach(r => lines.push([r.l.id, r.l.name, r.l.school, r.l.grade, r.l.group, r.nPre == null ? '' : round1(r.nPre), r.nPost == null ? '' : round1(r.nPost), r.nPre != null && r.nPost != null ? round1(r.nPost - r.nPre) : '', ...csvRead(r, 'EN'), ...csvRead(r, 'FIL'), r.trackFirst, r.trackLatest, r.readPresent, r.readLast, r.wsMath || '', r.wsRead || '', r.days, r.abs].map(csvCell).join(',')));
   const blob = new Blob(['\ufeff' + lines.join('\n')], { type: 'text/csv;charset=utf-8' }); const a = h('a', { href: URL.createObjectURL(blob), download: 'ARAL-progress-' + P.session.tutor_id + '-' + todayISO() + '.csv' }); document.body.append(a); a.click(); a.remove();
 }
 function printReport() {
@@ -1518,7 +1584,7 @@ function sheetHelp(open) {
       h('p', {}, 'The learner redoes every △ and ○ item until it is right, then you cross the mark out. Save the worksheet again with 0 and 0 and it becomes a star. A learner moves to the next worksheet only after a star.'),
       h('p', {}, 'Do not give answers or reteach. Ask guiding questions and point the learner back to an easier worksheet.')),
     sec('daily', 'Every day (Today tab)',
-      h('ol', {}, h('li', {}, 'Open Today and pick the date and subject.'), h('li', {}, 'Tap a learner. Set the worksheet number (it starts at the next one).'), h('li', {}, 'Set △ and ○ from your checking. Tap Save worksheet, or Absent.'))),
+      h('ol', {}, h('li', {}, 'Open Today and pick the date and subject.'), h('li', {}, 'For Reading: tap a learner, choose Basic or Plus (Grade 4 and up), then the week and session you taught. There are no marks for reading sessions, only present or absent.'), h('li', {}, 'Tap a learner. Set the worksheet number (it starts at the next one).'), h('li', {}, 'Set △ and ○ from your checking. Tap Save worksheet, or Absent.'))),
     sec('tests', 'Pretest and posttest',
       h('p', {}, 'Do the Pretest at the start and the Posttest at the end of the program. The app opens on Posttest from December 1. You can switch at the top of Learners.'),
       h('p', {}, h('strong', {}, 'Numeracy: '), 'Tap a learner, then Numeracy. Choose a lower level for a learner who is behind. The learner answers on the phone, or you type answers from paper. A ○ in the result means review that item. Correct answers are not shown so the posttest stays fair.'),
