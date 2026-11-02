@@ -149,6 +149,8 @@ table.mini{width:100%;border-collapse:collapse;font-size:14px}.mini th,.mini td{
 .glist{display:flex;flex-direction:column;gap:8px;max-height:46vh;overflow:auto}.grow{display:grid;grid-template-columns:1fr minmax(150px,200px);gap:6px 10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#fff}.grow.perfect{border-color:var(--sun);background:var(--sun-l)}.grow.redo{border-color:var(--coral);background:var(--coral-l)}.grow.absent{background:#EEF1F6}.gnums{grid-column:1/-1;display:flex;gap:10px}.gnum{display:flex;align-items:center;gap:6px;font-weight:700}.gnum input{width:72px;min-height:40px}
 .startbox{border-left:4px solid var(--sea);background:var(--sea-l);border-radius:10px;padding:10px 14px;margin:8px 0}.startbox ol{margin:6px 0 0 18px;padding:0}.startbox li{margin:3px 0}
 .tries{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:14px;color:var(--ink2)}.tries ul{margin:6px 0 0 18px;padding:0}.tries strong{color:var(--ink)}
+.strip{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:14px;color:var(--ink2)}.sym{font-weight:700;font-size:18px;line-height:1}.sym.star{color:var(--sun)}.sym.tri{color:var(--ink)}.sym.circ{color:var(--coral)}.sym.ci{font-size:12px;background:var(--sea-l);border-radius:8px;padding:3px 7px;color:var(--sea-d)}.grow.help{border-color:var(--ink)}.grow.notyet{border-color:var(--coral);background:var(--coral-l)}
+.lasbox{border:1px dashed var(--line);border-radius:12px;padding:10px 12px;background:#fff;display:flex;flex-direction:column;gap:6px}.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.row3 input{min-height:44px;width:100%}
 .stat{padding:10px 12px;border-radius:10px;font-weight:700;text-align:center}.stat.perfect{background:var(--sun-l);color:#7A5600}.stat.redo{background:var(--coral-l);color:var(--coral)}
 
 /* report */
@@ -1091,7 +1093,7 @@ function sheetLearner(id) {
     h('h2', {}, l.name), h('p', { class: 'sub' }, 'Grade ' + l.grade + ' · ' + (l.school || 'No school') + ' · ' + (l.group === 'pullout' ? 'Pull-out group' : 'Regular group') + ' · Code ' + l.id),
     h('div', { class: 'two' }, h('button', { class: 'btn primary', onclick: () => { closeSheet(); sheetNumLaunch(id); } }, 'Numeracy ' + (S.phase === 'pre' ? 'pretest' : 'posttest')), h('button', { class: 'btn primary', onclick: () => { closeSheet(); sheetReadLaunch(id); } }, 'Reading ' + (S.phase === 'pre' ? 'pretest' : 'posttest'))),
     h('div', { class: 'two' }, h('button', { class: 'btn', onclick: () => { closeSheet(); S.tab = 'session'; S.openRow = id; render(); } }, 'Log a session'), h('button', { class: 'btn', onclick: () => { closeSheet(); sheetEdit(id); } }, 'Edit learner')),
-    learnerStart(l, R),
+    readStripEl(l.id), learnerStart(l, R),
     doms.length ? h('table', { class: 'mini' }, h('thead', {}, h('tr', {}, h('th', {}, ''), h('th', {}, 'Pretest'), h('th', {}, 'Posttest'))), h('tbody', {}, doms.map(d => h('tr', {}, h('th', {}, domLabel(d)), h('td', {}, resLine(R[d].pre)), h('td', {}, resLine(R[d].post)))))) : h('p', { class: 'sub' }, 'No test results yet.')));
 }
 
@@ -1361,6 +1363,9 @@ const ciOf = t => { const m = /ci:(\d)/.exec(t.note || ''); return m ? Number(m[
 const ciData = t => { const g = k => { const m = new RegExp('(?:^|;)' + k + ':(\\d+)').exec(t.note || ''); return m ? Number(m[1]) : 0; }; return { n: ciOf(t), c: g('c'), tot: g('n'), secs: g('t') }; };
 const CI_SESSION = { fil: { 1: 15, 2: 24, 3: 31, 4: 36 } }; /* Progress Check-ins are numbered sessions in the Key Stage 1 Filipino schedule */
 function lastLessonEntry(lid) { const e = D().tracker.filter(t => t.learner_id === lid && t.domain === 'reading' && !Number(t.absent) && !ciOf(t)).sort((a, b) => (a.date + a.created_at < b.date + b.created_at ? -1 : 1)); return e[e.length - 1]; }
+const lasData = t => { const g = k => { const m = new RegExp('(?:^|;)' + k + ':(\\d+)').exec(t.note || ''); return m ? Number(m[1]) : null; }; const of = g('of'); return of ? { no: g('las'), ok: Math.min(g('ok') || 0, of), of } : null; };
+const markFrom = (ok, of) => (ok >= of ? 'star' : ok / of >= 0.5 ? 'help' : 'not'); /* all right = star, half or more = triangle, less than half = circle */
+const MARK_SYM = { star: '\u2605', help: '\u25B3', not: '\u25CB' };
 const readSeq = (track, wk, ss, num) => (track === 'KS1' ? num : (wk - 1) * 4 + ss);
 const readNote = (ks, track, wk, ss, lang) => 'track:' + track + ';ks:' + ks + (track === 'KS1' ? ';lang:' + (lang || 'fil') : ';wk:' + wk + ';s:' + ss);
 function readLabel(t) {
@@ -1375,6 +1380,11 @@ function trackFor(l, ks) {
   ks = ks || ksFor(l); if (ks === 1) return 'KS1'; const last = lastEntry(l.id, 'reading'); const tr = last && trackOf(last); if (tr === 'Basic' || tr === 'Plus') return tr;
   const R = resultsFor(l.id); const pre = (R.reading_en && R.reading_en.pre) || (R.reading_fil && R.reading_fil.pre); return pre && pre.mode === 'passage' ? 'Plus' : 'Basic';
 }
+function readStripEl(lid) {
+  const e = D().tracker.filter(t => t.learner_id === lid && t.domain === 'reading' && !Number(t.absent)).sort((a, b) => (a.date + a.created_at < b.date + b.created_at ? -1 : 1)).slice(-12); if (!e.length) return null;
+  return h('div', { class: 'strip', 'aria-label': 'Recent reading sessions' }, h('span', {}, 'Recent:'), e.map(t => (ciOf(t) ? h('span', { class: 'sym ci', title: 'Progress Check-in ' + ciOf(t) }, 'CI' + ciOf(t)) : h('span', { class: 'sym ' + (Number(t.circ) ? 'circ' : Number(t.tri) ? 'tri' : 'star'), title: readLabel(t) }, Number(t.circ) ? '\u25CB' : Number(t.tri) ? '\u25B3' : '\u2605'))));
+}
+function readChip(mine) { const les = mine.filter(t => !Number(t.absent) && !ciOf(t)); if (!les.length) return 'Check-in'; const t = les[les.length - 1]; return Number(t.circ) ? '\u25CB Not yet' : Number(t.tri) ? '\u25B3 Needed help' : '\u2605 Did well'; }
 const wsLabel = t => (t.domain === 'math' ? setLabel(entrySet(t) || 1) + ' WS ' + t.worksheet : readLabel(t));
 function lastEntry(lid, dom, set) { const e = D().tracker.filter(t => t.learner_id === lid && t.domain === dom && !Number(t.absent) && (set == null || (entrySet(t) || 1) === set)).sort((a, b) => (a.date + a.created_at < b.date + b.created_at ? -1 : 1)); return e[e.length - 1]; }
 function scrSession() {
@@ -1390,8 +1400,8 @@ function scrSession() {
     const stars = mine.filter(t => !Number(t.absent) && !Number(t.tri) && !Number(t.circ)).length; const le = lastEntry(l.id, S.sdom);
     const open = S.openRow === l.id;
     box.append(h('div', { class: 'srow' + (open ? ' open' : '') },
-      h('button', { class: 'shead', onclick: () => { S.openRow = open ? null : l.id; render(); } }, h('span', { class: 'av ' + (l.group === 'pullout' ? 'pull' : '') }, initials(l.name)), h('span', { class: 'rn' }, h('strong', {}, l.name), h('small', {}, 'Gr ' + l.grade + ' \u00B7 ' + (le ? 'Last: ' + wsLabel(le) + (Number(le.tri) || Number(le.circ) ? ' (needs redo)' : ' ★') : 'No entries yet'))),
-        h('span', { class: 'chips' }, absent ? h('i', { class: 'chip bad' }, 'Absent') : mine.length ? h('i', { class: 'chip ok' }, S.sdom === 'reading' ? 'Present' : stars + '\u2605 ' + (mine.length - stars) + ' redo') : null)),
+      h('button', { class: 'shead', onclick: () => { S.openRow = open ? null : l.id; render(); } }, h('span', { class: 'av ' + (l.group === 'pullout' ? 'pull' : '') }, initials(l.name)), h('span', { class: 'rn' }, h('strong', {}, l.name), h('small', {}, 'Gr ' + l.grade + ' \u00B7 ' + (le ? 'Last: ' + wsLabel(le) + (Number(le.tri) || Number(le.circ) ? (S.sdom === 'reading' ? (Number(le.circ) ? ' (not yet)' : ' (needed help)') : ' (needs redo)') : ' ★') : 'No entries yet'))),
+        h('span', { class: 'chips' }, absent ? h('i', { class: 'chip bad' }, 'Absent') : mine.length ? h('i', { class: 'chip ok' }, S.sdom === 'reading' ? readChip(mine) : stars + '\u2605 ' + (mine.length - stars) + ' redo') : null)),
       open ? sessionPanel(l, date) : null));
   });
   return box;
@@ -1471,14 +1481,26 @@ function stepperRow(label, get, set, min, max) {
 function readingPanel(l, date) {
   let ks = ksFor(l); let track = trackFor(l, ks); const last = lastEntry(l.id, 'reading'); const lastL = lastLessonEntry(l.id); let lang = (last && langNote(last)) || 'fil'; let pos = nextRead(lastL, ks, track, lang);
   const doneCi = new Set(D().tracker.filter(t => t.learner_id === l.id && t.domain === 'reading' && ciOf(t) && !Number(t.absent)).map(ciOf)); let act = 'lesson'; const ci = { n: Math.min(4, doneCi.size + 1), c: 0, tot: 0, secs: 0 };
-  const posBox = h('div', { class: 'stack' }); const info = h('p', { class: 'hint' }); const progBox = h('div', {}); const actBox = h('div', { class: 'stack' }); const pct = h('p', { class: 'hint' }); let saveBtn = null;
+  const posBox = h('div', { class: 'stack' }); const info = h('p', { class: 'hint' }); const progBox = h('div', {}); const actBox = h('div', { class: 'stack' }); const pct = h('p', { class: 'hint' }); let saveBtn = null; let mark = 'star'; const markBox = h('div', {});
+  const prevLas = D().tracker.filter(t => t.learner_id === l.id && t.domain === 'reading' && lasData(t)).sort((a, b) => (a.date + a.created_at < b.date + b.created_at ? -1 : 1)).pop(); const las = { no: 0, of: prevLas ? lasData(prevLas).of : 0, ok: 0 }; las.ok = las.of; let okTouched = false;
   const setCiSession = () => { if (act === 'checkin' && lang === 'fil') pos.num = CI_SESSION.fil[ci.n]; };
   const drawPos = () => {
     posBox.innerHTML = ''; if (track === 'KS1') posBox.append(stepperRow('Session no.', () => pos.num, v => { pos.num = v; }, 1, 40)); else posBox.append(stepperRow('Week', () => pos.wk, v => { pos.wk = v; }, 1, 8), stepperRow('Session', () => pos.ss, v => { pos.ss = v; }, 1, 4));
     const lt = lastL && trackOf(lastL); const lk = lastL && (ksNote(lastL) || (lt === 'KS1' ? 1 : ksOf(l.grade)));
     info.textContent = lastL && (lt !== track || lk !== ks) ? 'This learner was in ' + readLabel(lastL).replace(/ [WS]\d.*$/, '') + '. Counting starts again at the first session of ' + (track === 'KS1' ? 'Key Stage 1' : 'Key Stage ' + ks + ' ' + track) + '.' : (lastL ? 'Last lesson: ' + readLabel(lastL) + '.' : 'First reading session.');
   };
+  const drawMark = () => {
+    markBox.innerHTML = ''; if (ks === 1 && act === 'checkin') return;
+    const mseg = h('div', { class: 'seg', id: 'markSeg' }, [['star', '\u2605 Did well'], ['help', '\u25B3 Needed help'], ['not', '\u25CB Not yet']].map(([k, t]) => h('button', { id: 'mark_' + k, class: mark === k ? 'on' : '', onclick: () => { mark = k; [...mseg.children].forEach(c => c.classList.toggle('on', c.id === 'mark_' + k)); } }, t)));
+    const mlabel = h('label', { class: 'fld' }, h('span', {}, 'How did the session go for this learner?'), mseg); const line = h('p', { class: 'hint', id: 'lasLine' });
+    const upd = () => { const on = las.of > 0; mlabel.hidden = on; const okv = Math.min(las.ok, las.of); line.textContent = on ? 'Score: ' + okv + ' of ' + las.of + ' (' + Math.round(okv / las.of * 100) + '%) \u2192 ' + MARK_SYM[markFrom(okv, las.of)] : 'Optional: type the LAS score and the mark is set for you.'; };
+    const okIn = h('input', { id: 'lasOk', type: 'number', min: '0', inputmode: 'numeric', value: las.of ? String(las.ok) : '', oninput: e => { las.ok = Math.max(0, Number(e.target.value) || 0); okTouched = true; upd(); } });
+    const noIn = h('input', { id: 'lasNo', type: 'number', min: '0', inputmode: 'numeric', value: las.no ? String(las.no) : '', oninput: e => { las.no = Math.max(0, Number(e.target.value) || 0); } });
+    const ofIn = h('input', { id: 'lasOf', type: 'number', min: '0', inputmode: 'numeric', value: las.of ? String(las.of) : '', oninput: e => { las.of = Math.max(0, Number(e.target.value) || 0); if (!okTouched) { las.ok = las.of; okIn.value = las.of ? String(las.of) : ''; } upd(); } });
+    markBox.append(h('div', { class: 'lasbox' }, h('strong', {}, 'LAS score (optional)'), h('div', { class: 'row3' }, h('label', { class: 'fld' }, h('span', {}, 'LAS no.'), noIn), h('label', { class: 'fld' }, h('span', {}, 'Items in the LAS'), ofIn), h('label', { class: 'fld' }, h('span', {}, 'Items correct'), okIn)), line), mlabel); upd();
+  };
   const drawAct = () => {
+    drawMark();
     actBox.innerHTML = ''; if (saveBtn) saveBtn.textContent = act === 'checkin' && ks === 1 ? 'Save check-in' : 'Save session'; if (ks !== 1) return;
     const aseg = h('div', { class: 'seg', id: 'actSeg' }, [['lesson', 'Lesson session'], ['checkin', 'Progress Check-in']].map(([k, t]) => h('button', { id: 'act_' + k, class: act === k ? 'on' : '', onclick: () => { act = k; setCiSession(); drawAct(); drawPos(); } }, t)));
     actBox.append(h('label', { class: 'fld' }, h('span', {}, 'What did you do today?'), aseg));
@@ -1499,9 +1521,10 @@ function readingPanel(l, date) {
   const mk = absent => {
     let extra = '';
     if (!absent && act === 'checkin' && ks === 1) { if (!(ci.tot > 0) || ci.c > ci.tot) { toast('Enter the items read correctly and the number of items in the check-in.', 3500); return false; } extra = ';ci:' + ci.n + ';c:' + ci.c + ';n:' + ci.tot + ';t:' + ci.secs; }
-    addOp('tracker', { entry_id: uid(), learner_id: l.id, tutor_id: P.session.tutor_id, date, domain: 'reading', worksheet: absent ? '' : readSeq(track, pos.wk, pos.ss, pos.num), tri: 0, circ: 0, retries: 0, absent: absent ? 1 : 0, note: readNote(ks, track, pos.wk, pos.ss, lang) + extra, created_at: new Date().toISOString() }); return true;
+    const scored = !absent && !extra && las.of > 0; const okv = Math.min(las.ok, las.of); const eff = scored ? markFrom(okv, las.of) : mark;
+    addOp('tracker', { entry_id: uid(), learner_id: l.id, tutor_id: P.session.tutor_id, date, domain: 'reading', worksheet: absent ? '' : readSeq(track, pos.wk, pos.ss, pos.num), tri: !absent && !extra && eff === 'help' ? 1 : 0, circ: !absent && !extra && eff === 'not' ? 1 : 0, retries: 0, absent: absent ? 1 : 0, note: readNote(ks, track, pos.wk, pos.ss, lang) + extra + (scored ? ';las:' + las.no + ';ok:' + okv + ';of:' + las.of : ''), created_at: new Date().toISOString() }); return true;
   };
-  return h('div', { class: 'spanel' }, h('label', { class: 'fld' }, h('span', {}, 'Reading materials (ARAL-Reading)'), ksSel), progBox, actBox, posBox, info,
+  return h('div', { class: 'spanel' }, h('label', { class: 'fld' }, h('span', {}, 'Reading materials (ARAL-Reading)'), ksSel), progBox, actBox, posBox, markBox, info, readStripEl(l.id),
     h('div', { class: 'two' }, h('button', { class: 'btn', onclick: () => { mk(true); S.openRow = null; render(); toast(l.name + ' marked absent'); } }, 'Absent'), (saveBtn = h('button', { class: 'btn primary', id: 'btnSaveReading', onclick: () => { if (mk(false) === false) return; S.openRow = null; render(); toast(act === 'checkin' && ks === 1 ? 'Saved Progress Check-in ' + ci.n : 'Saved reading session'); } }, 'Save session'))));
 }
 function sheetGroupLogReading(date) {
@@ -1511,24 +1534,26 @@ function sheetGroupLogReading(date) {
   let sel = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a])[0] || '1'; const cur = () => OPTS.find(o => o[0] === sel); const ksOfSel = () => Number(sel[0]); const trackOfSel = () => cur()[1];
   const groupKey = l => { const k = ksFor(l); return k === 1 ? '1' : k + (trackFor(l, k) === 'Plus' ? 'P' : 'B'); };
   const guess = () => { const c = {}; L.filter(l => groupKey(l) === sel).forEach(l => { const p = nextRead(lastLessonEntry(l.id), ksOfSel(), trackOfSel()); const n = readSeq(trackOfSel(), p.wk, p.ss, p.num); c[n] = (c[n] || 0) + 1; }); const k = Object.keys(c).sort((a, b) => c[b] - c[a])[0]; return posFromSeq(trackOfSel(), Number(k || 1)); };
-  let glang = 'fil'; let pos = guess(); const rows = L.map(l => ({ l, st: 'skip' })); const langBox = h('div', {}); const posBox = h('div', { class: 'stack' }); const list = h('div', { class: 'glist' }); const sum = h('p', { class: 'sub' }); const msg = h('p', { class: 'err', role: 'alert' });
+  let glang = 'fil'; let pos = guess(); let gno = 0, gof = 0; const rows = L.map(l => ({ l, st: 'skip', ok: null })); const langBox = h('div', {}); const posBox = h('div', { class: 'stack' }); const list = h('div', { class: 'glist' }); const sum = h('p', { class: 'sub' }); const msg = h('p', { class: 'err', role: 'alert' });
   const drawLang = () => { langBox.innerHTML = ''; if (trackOfSel() !== 'KS1') return; const lseg = h('div', { class: 'seg', id: 'gLang' }, [['fil', 'Filipino guide'], ['en', 'English guide']].map(([k, t]) => h('button', { id: 'glang_' + k, class: glang === k ? 'on' : '', onclick: () => { glang = k; drawLang(); } }, t))); langBox.append(h('label', { class: 'fld' }, h('span', {}, 'Key Stage 1 has one program, with no Basic or Plus. Which guide?'), lseg)); };
   const drawPos = () => { drawLang(); posBox.innerHTML = ''; if (trackOfSel() === 'KS1') posBox.append(stepperRow('Session no.', () => pos.num, v => { pos.num = v; }, 1, 40)); else posBox.append(stepperRow('Week', () => pos.wk, v => { pos.wk = v; }, 1, 8), stepperRow('Session', () => pos.ss, v => { pos.ss = v; }, 1, 4)); };
   const draw = () => {
-    list.innerHTML = '';
-    rows.forEach(r => { const g = OPTS.find(o => o[0] === groupKey(r.l)); const sl = h('select', { 'aria-label': 'Result for ' + r.l.name, onchange: e => { r.st = e.target.value; draw(); } }, [['skip', 'Skip (no entry)'], ['perfect', 'Present'], ['absent', 'Absent']].map(([v, t]) => h('option', { value: v, selected: r.st === v }, t)));
-      list.append(h('div', { class: 'grow ' + r.st }, h('span', {}, h('strong', {}, r.l.name), h('small', {}, '  Gr ' + r.l.grade + ' \u00B7 ' + g[2] + (lastEntry(r.l.id, 'reading') ? ' \u00B7 last ' + readLabel(lastEntry(r.l.id, 'reading')) : ''))), sl)); });
-    const c = { perfect: 0, absent: 0, skip: 0 }; rows.forEach(r => { c[r.st]++; }); sum.textContent = c.perfect + ' present \u00B7 ' + c.absent + ' absent \u00B7 ' + c.skip + ' skipped';
+    list.innerHTML = ''; if (gof > 0) rows.forEach(r => { if (r.st === 'help' || r.st === 'notyet') r.st = 'perfect'; });
+    rows.forEach(r => { const g = OPTS.find(o => o[0] === groupKey(r.l)); const sl = h('select', { 'aria-label': 'Result for ' + r.l.name, onchange: e => { r.st = e.target.value; draw(); } }, (gof > 0 ? [['skip', 'Skip (no entry)'], ['perfect', 'Present (score it)'], ['absent', 'Absent']] : [['skip', 'Skip (no entry)'], ['perfect', '\u2605 Did well'], ['help', '\u25B3 Needed help'], ['notyet', '\u25CB Not yet'], ['absent', 'Absent']]).map(([v, t]) => h('option', { value: v, selected: r.st === v }, t)));
+      const scoreIn = gof > 0 && r.st === 'perfect' ? h('div', { class: 'gnums' }, h('label', { class: 'gnum' }, h('span', {}, 'Correct of ' + gof), h('input', { type: 'number', min: '0', max: String(gof), inputmode: 'numeric', value: String(r.ok == null ? gof : r.ok), 'aria-label': 'Items correct for ' + r.l.name, oninput: e => { r.ok = Math.max(0, Math.min(gof, Number(e.target.value) || 0)); } }))) : null;
+      list.append(h('div', { class: 'grow ' + r.st }, h('span', {}, h('strong', {}, r.l.name), h('small', {}, '  Gr ' + r.l.grade + ' \u00B7 ' + g[2] + (lastEntry(r.l.id, 'reading') ? ' \u00B7 last ' + readLabel(lastEntry(r.l.id, 'reading')) : ''))), sl, scoreIn)); });
+    const c = { perfect: 0, help: 0, notyet: 0, absent: 0, skip: 0 }; rows.forEach(r => { c[r.st]++; }); sum.textContent = gof > 0 ? c.perfect + ' to score \u00B7 ' + c.absent + ' absent \u00B7 ' + c.skip + ' skipped' : c.perfect + ' did well \u00B7 ' + c.help + ' needed help \u00B7 ' + c.notyet + ' not yet \u00B7 ' + c.absent + ' absent \u00B7 ' + c.skip + ' skipped';
   };
   const seg = h('div', { class: 'seg', id: 'gTrack' }, OPTS.map(o => h('button', { id: 'gt_' + o[0], class: sel === o[0] ? 'on' : '', onclick: () => { sel = o[0]; pos = guess(); [...seg.children].forEach(c => c.classList.toggle('on', c.id === 'gt_' + o[0])); updSel(); drawPos(); } }, o[2])));
   const selBtn = h('button', { class: 'btn wide', id: 'gSelProg', onclick: () => { rows.forEach(r => { r.st = groupKey(r.l) === sel ? 'perfect' : 'skip'; }); draw(); } });
-  const updSel = () => { selBtn.textContent = 'Mark the ' + L.filter(l => groupKey(l) === sel).length + ' learners in ' + cur()[2] + ' as present'; };
-  updSel(); drawPos(); draw();
+  const updSel = () => { selBtn.textContent = 'Mark the ' + L.filter(l => groupKey(l) === sel).length + ' learners in ' + cur()[2] + ' as \u2605 did well'; };
+  updSel();   const lasRow = h('div', { class: 'lasbox' }, h('strong', {}, 'LAS score (optional)'), h('div', { class: 'row3' }, h('label', { class: 'fld' }, h('span', {}, 'LAS no.'), h('input', { id: 'gLasNo', type: 'number', min: '0', inputmode: 'numeric', oninput: e => { gno = Math.max(0, Number(e.target.value) || 0); } })), h('label', { class: 'fld' }, h('span', {}, 'Items in the LAS'), h('input', { id: 'gLasOf', type: 'number', min: '0', inputmode: 'numeric', oninput: e => { gof = Math.max(0, Number(e.target.value) || 0); draw(); } }))), h('p', { class: 'hint' }, 'Type how many items the LAS has and each learner gets a score and a mark. Leave it empty to give a mark only.'));
+  drawPos(); draw();
   openSheet(h('div', { class: 'stack' }, h('h2', {}, 'Log the whole group'), h('p', { class: 'sub' }, 'Reading \u00B7 ' + date + '. Same key stage, program, week, and session for everyone you mark. Skip learners who were in a different program today.'),
-    h('label', { class: 'fld' }, h('span', {}, 'Reading materials (ARAL-Reading)'), seg), langBox, posBox, h('div', { class: 'two' }, h('button', { class: 'btn', id: 'gAllStar', onclick: () => { rows.forEach(r => { r.st = 'perfect'; }); draw(); } }, 'Everyone present'), h('button', { class: 'btn', onclick: () => { rows.forEach(r => { r.st = 'skip'; }); draw(); } }, 'Clear all')), selBtn, list, sum, msg,
+    h('label', { class: 'fld' }, h('span', {}, 'Reading materials (ARAL-Reading)'), seg), langBox, posBox, lasRow, h('div', { class: 'two' }, h('button', { class: 'btn', id: 'gAllStar', onclick: () => { rows.forEach(r => { r.st = 'perfect'; }); draw(); } }, 'Everyone \u2605 did well'), h('button', { class: 'btn', onclick: () => { rows.forEach(r => { r.st = 'skip'; }); draw(); } }, 'Clear all')), selBtn, list, sum, msg,
     h('button', { class: 'btn primary wide', id: 'gSave', onclick: () => {
       msg.textContent = ''; if (rows.every(r => r.st === 'skip')) { msg.textContent = 'Choose a result for at least one learner.'; return; }
-      let n = 0; rows.forEach(r => { if (r.st === 'skip') return; const ab = r.st === 'absent'; addOp('tracker', { entry_id: uid(), learner_id: r.l.id, tutor_id: P.session.tutor_id, date, domain: 'reading', worksheet: ab ? '' : readSeq(trackOfSel(), pos.wk, pos.ss, pos.num), tri: 0, circ: 0, retries: 0, absent: ab ? 1 : 0, note: readNote(ksOfSel(), trackOfSel(), pos.wk, pos.ss, glang), created_at: new Date().toISOString() }); n++; });
+      let n = 0; rows.forEach(r => { if (r.st === 'skip') return; const ab = r.st === 'absent'; const sc = gof > 0 && r.st === 'perfect'; const okv = sc ? Math.min(r.ok == null ? gof : r.ok, gof) : 0; const eff = sc ? markFrom(okv, gof) : (r.st === 'help' ? 'help' : r.st === 'notyet' ? 'not' : 'star'); addOp('tracker', { entry_id: uid(), learner_id: r.l.id, tutor_id: P.session.tutor_id, date, domain: 'reading', worksheet: ab ? '' : readSeq(trackOfSel(), pos.wk, pos.ss, pos.num), tri: !ab && eff === 'help' ? 1 : 0, circ: !ab && eff === 'not' ? 1 : 0, retries: 0, absent: ab ? 1 : 0, note: readNote(ksOfSel(), trackOfSel(), pos.wk, pos.ss, glang) + (sc ? ';las:' + gno + ';ok:' + okv + ';of:' + gof : ''), created_at: new Date().toISOString() }); n++; });
       closeSheet(); S.openRow = null; render(); toast(n + ' entries saved');
     } }, 'Save for the group')));
 }
@@ -1540,11 +1565,11 @@ function metrics() {
     const rLangs = [['EN', 'English', pr(R.reading_en)], ['FIL', 'Filipino', pr(R.reading_fil)]].filter(x => x[2] && (x[2].pre != null || x[2].post != null)).map(x => ({ code: x[0], name: x[1], pre: x[2].pre, post: x[2].post }));
     const tr = D().tracker.filter(t => t.learner_id === l.id);
     const rt = tr.filter(t => t.domain === 'reading').sort((a, b) => (a.date + a.created_at < b.date + b.created_at ? -1 : 1)); const tks = rt.filter(trackOf); const tn = t => (trackOf(t) === 'KS1' ? 'KS1' : 'KS' + (ksNote(t) || ksOf(l.grade)) + ' ' + trackOf(t));
-    const trackFirst = tks.length ? tn(tks[0]) : ''; const trackLatest = tks.length ? tn(tks[tks.length - 1]) : ''; const trackTxt = !tks.length ? '\u2014' : trackFirst === trackLatest ? trackLatest : trackFirst + ' \u2192 ' + trackLatest; const presentRead = rt.filter(t => !Number(t.absent)); const cis = {}; presentRead.filter(ciOf).forEach(t => { const d = ciData(t); cis[d.n] = d.tot ? d.c / d.tot * 100 : null; }); const ciTxt = Object.keys(cis).map(k => 'CI' + k + ' ' + (cis[k] == null ? '\u2014' : Math.round(cis[k]) + '%')).join(' \u00B7 '); const readLast = presentRead.length ? readLabel(presentRead[presentRead.length - 1]) : '';
+    const trackFirst = tks.length ? tn(tks[0]) : ''; const trackLatest = tks.length ? tn(tks[tks.length - 1]) : ''; const trackTxt = !tks.length ? '\u2014' : trackFirst === trackLatest ? trackLatest : trackFirst + ' \u2192 ' + trackLatest; const presentRead = rt.filter(t => !Number(t.absent)); const les = presentRead.filter(t => !ciOf(t)); const sCirc = les.filter(t => Number(t.circ)).length; const sTri = les.filter(t => !Number(t.circ) && Number(t.tri)).length; const sStar = les.length - sCirc - sTri; const lasP = les.map(lasData).filter(Boolean).map(x => x.ok / x.of * 100); const lasAvg = lasP.length ? lasP.reduce((x, y) => x + y, 0) / lasP.length : null; const last5 = lasP.slice(-5); const lasRecent = last5.length ? last5.reduce((x, y) => x + y, 0) / last5.length : null; const sTxt = les.length ? '\u2605' + sStar + ' \u25B3' + sTri + ' \u25CB' + sCirc : ''; const cis = {}; presentRead.filter(ciOf).forEach(t => { const d = ciData(t); cis[d.n] = d.tot ? d.c / d.tot * 100 : null; }); const ciTxt = Object.keys(cis).map(k => 'CI' + k + ' ' + (cis[k] == null ? '\u2014' : Math.round(cis[k]) + '%')).join(' \u00B7 '); const readLast = presentRead.length ? readLabel(presentRead[presentRead.length - 1]) : '';
     const mx = d => Math.max(0, ...tr.filter(t => t.domain === d && !Number(t.absent) && t.worksheet !== '').map(t => Number(t.worksheet)));
     const mxMath = (() => { let best = 0; tr.forEach(t => { if (t.domain === 'math' && !Number(t.absent) && t.worksheet !== '') best = Math.max(best, (entrySet(t) || 1) * 1000 + Number(t.worksheet)); }); return best ? setLabel(Math.floor(best / 1000)) + '-' + (best % 1000) : ''; })();
     const days = new Set(tr.filter(t => !Number(t.absent)).map(t => t.date)).size; const abs = new Set(tr.filter(t => Number(t.absent)).map(t => t.date)).size;
-    return { l, nPre: n.pre ? n.pre.pct : null, nPost: n.post ? n.post.pct : null, rLangs, trackFirst, trackLatest, trackTxt, readPresent: presentRead.length, readLast, cis, ciTxt, wsMath: mxMath, wsRead: mx('reading'), days, abs };
+    return { l, nPre: n.pre ? n.pre.pct : null, nPost: n.post ? n.post.pct : null, rLangs, trackFirst, trackLatest, trackTxt, readPresent: presentRead.length, readLast, cis, ciTxt, sStar, sTri, sCirc, sTxt, lasN: lasP.length, lasAvg, lasRecent, wsMath: mxMath, wsRead: mx('reading'), days, abs };
   });
   return rows;
 }
@@ -1567,7 +1592,7 @@ function fmtGain(a, b, u) { if (a == null || b == null) return '—'; const g = 
 function reportTable(rows) {
   return h('table', { class: 'rep' }, h('thead', {}, h('tr', {}, ['Learner', 'Gr', 'Num pre', 'Num post', 'Gain', 'Read pre', 'Read post', 'Gain', 'Reading program', 'WS math', 'Days'].map(t => h('th', {}, t)))),
     h('tbody', {}, rows.map(r => h('tr', {}, h('th', {}, r.l.name), h('td', {}, r.l.grade), h('td', {}, r.nPre == null ? '—' : Math.round(r.nPre) + '%'), h('td', {}, r.nPost == null ? '—' : Math.round(r.nPost) + '%'), h('td', { class: gainCls(r.nPre, r.nPost) }, fmtGain(r.nPre, r.nPost)),
-      readCell(r, x => (x.pre == null ? '\u2014' : Math.round(x.pre) + '%')), readCell(r, x => (x.post == null ? '\u2014' : Math.round(x.post) + '%')), readCell(r, x => fmtGain(x.pre, x.post), true), h('td', {}, r.trackTxt, r.ciTxt ? h('div', { class: 'hint' }, r.ciTxt) : null), h('td', {}, r.wsMath || '—'), h('td', {}, r.days)))));
+      readCell(r, x => (x.pre == null ? '\u2014' : Math.round(x.pre) + '%')), readCell(r, x => (x.post == null ? '\u2014' : Math.round(x.post) + '%')), readCell(r, x => fmtGain(x.pre, x.post), true), h('td', {}, r.trackTxt, r.sTxt ? h('div', { class: 'hint' }, r.sTxt) : null, r.lasN ? h('div', { class: 'hint' }, 'LAS ' + Math.round(r.lasAvg) + '% (' + r.lasN + ')' + (r.lasN >= 6 ? ', last 5: ' + Math.round(r.lasRecent) + '%' : '')) : null, r.ciTxt ? h('div', { class: 'hint' }, r.ciTxt) : null), h('td', {}, r.wsMath || '—'), h('td', {}, r.days)))));
 }
 /* One line per reading language; a learner who took both English and Filipino shows both */
 function readCell(r, f, gain) { if (!r.rLangs.length) return h('td', {}, '\u2014'); const two = r.rLangs.length > 1; return h('td', {}, r.rLangs.map(x => h('div', { class: gain ? gainCls(x.pre, x.post) : '' }, (two ? x.code + ' ' : '') + f(x)))); }
@@ -1575,8 +1600,8 @@ const gainCls = (a, b) => (a == null || b == null ? '' : b > a ? 'up' : b < a ? 
 function csvCell(v) { v = v == null ? '' : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
 function csvRead(r, code) { const x = r.rLangs.find(y => y.code === code); return x ? [x.pre == null ? '' : round1(x.pre), x.post == null ? '' : round1(x.post), x.pre != null && x.post != null ? round1(x.post - x.pre) : ''] : ['', '', '']; }
 function downloadCSV() {
-  const head = ['learner_code', 'name', 'school', 'grade', 'group', 'numeracy_pre_pct', 'numeracy_post_pct', 'numeracy_gain', 'reading_en_pre_pct', 'reading_en_post_pct', 'reading_en_gain', 'reading_fil_pre_pct', 'reading_fil_post_pct', 'reading_fil_gain', 'reading_program_first', 'reading_program_latest', 'reading_sessions_present', 'reading_last_session', 'checkin1_pct', 'checkin2_pct', 'checkin3_pct', 'checkin4_pct', 'max_math_worksheet', 'max_reading_worksheet', 'days_present', 'days_absent'];
-  const lines = [head.join(',')]; metrics().forEach(r => lines.push([r.l.id, r.l.name, r.l.school, r.l.grade, r.l.group, r.nPre == null ? '' : round1(r.nPre), r.nPost == null ? '' : round1(r.nPost), r.nPre != null && r.nPost != null ? round1(r.nPost - r.nPre) : '', ...csvRead(r, 'EN'), ...csvRead(r, 'FIL'), r.trackFirst, r.trackLatest, r.readPresent, r.readLast, ...[1, 2, 3, 4].map(n => (r.cis[n] == null ? '' : round1(r.cis[n]))), r.wsMath || '', r.wsRead || '', r.days, r.abs].map(csvCell).join(',')));
+  const head = ['learner_code', 'name', 'school', 'grade', 'group', 'numeracy_pre_pct', 'numeracy_post_pct', 'numeracy_gain', 'reading_en_pre_pct', 'reading_en_post_pct', 'reading_en_gain', 'reading_fil_pre_pct', 'reading_fil_post_pct', 'reading_fil_gain', 'reading_program_first', 'reading_program_latest', 'reading_sessions_present', 'reading_last_session', 'checkin1_pct', 'checkin2_pct', 'checkin3_pct', 'checkin4_pct', 'reading_sessions_star', 'reading_sessions_partly', 'reading_sessions_notyet', 'las_scored', 'las_avg_pct', 'las_last5_avg_pct', 'max_math_worksheet', 'max_reading_worksheet', 'days_present', 'days_absent'];
+  const lines = [head.join(',')]; metrics().forEach(r => lines.push([r.l.id, r.l.name, r.l.school, r.l.grade, r.l.group, r.nPre == null ? '' : round1(r.nPre), r.nPost == null ? '' : round1(r.nPost), r.nPre != null && r.nPost != null ? round1(r.nPost - r.nPre) : '', ...csvRead(r, 'EN'), ...csvRead(r, 'FIL'), r.trackFirst, r.trackLatest, r.readPresent, r.readLast, ...[1, 2, 3, 4].map(n => (r.cis[n] == null ? '' : round1(r.cis[n]))), r.sStar, r.sTri, r.sCirc, r.lasN, r.lasAvg == null ? '' : round1(r.lasAvg), r.lasRecent == null ? '' : round1(r.lasRecent), r.wsMath || '', r.wsRead || '', r.days, r.abs].map(csvCell).join(',')));
   const blob = new Blob(['\ufeff' + lines.join('\n')], { type: 'text/csv;charset=utf-8' }); const a = h('a', { href: URL.createObjectURL(blob), download: 'ARAL-progress-' + P.session.tutor_id + '-' + todayISO() + '.csv' }); document.body.append(a); a.click(); a.remove();
 }
 function printReport() {
@@ -1608,20 +1633,20 @@ const G = {
 const glyph = k => h('span', { class: 'glyph', html: G[k] });
 function legend() {
   return h('button', { class: 'legend', onclick: () => sheetHelp('marks'), 'aria-label': 'What do the star, triangle and circle mean?' },
-    h('span', {}, glyph('star'), 'all correct'), h('span', {}, glyph('tri'), 'partly correct'), h('span', {}, glyph('circ'), 'wrong'), h('em', {}, 'What do these mean?'));
+    h('span', {}, glyph('star'), S.sdom === 'reading' ? 'did well' : 'all correct'), h('span', {}, glyph('tri'), S.sdom === 'reading' ? 'needed help' : 'partly correct'), h('span', {}, glyph('circ'), S.sdom === 'reading' ? 'not yet' : 'wrong'), h('em', {}, 'What do these mean?'));
 }
 function sheetHelp(open) {
   const sec = (id, title, ...body) => h('details', { open: open === id ? true : null }, h('summary', {}, title), h('div', { class: 'hbody' }, ...body));
   const row = (k, t, d) => h('div', { class: 'mrow' }, glyph(k), h('div', {}, h('strong', {}, t), h('p', {}, d)));
   openSheet(h('div', { class: 'stack' }, h('h2', {}, 'How to use this app'),
-    sec('marks', 'The star, triangle and circle', h('p', { class: 'sub' }, 'These are the same marks you use on the learners’ worksheets, from the ARAL Tutor’s Guide.'),
+    sec('marks', 'The star, triangle and circle', h('p', { class: 'sub' }, 'These are the same marks you use on the learners’ worksheets, from the ARAL Tutor’s Guide.'), h('p', { class: 'sub' }, 'For Reading, the same marks describe how a session went: \u2605 the learner did well, \u25B3 the learner needed help, \u25CB not yet. They are the tutor\u2019s own record. The ARAL-Reading guides have no marking scheme, so these marks never stop a learner from moving on.'),
       row('star', 'Star: all items correct', 'Draw a star at the top of the worksheet when every item is right. In the app: leave △ and ○ at 0 and tap Save worksheet.'),
       row('tri', 'Triangle: partly correct', 'Draw it on an item that is incomplete, has a spelling mistake, has no answer, or did not follow the instructions. Count your triangles and put the number in “△ partly correct”.'),
       row('circ', 'Circle: wrong', 'Draw it on an item that is wrong. Count your circles and put the number in “○ wrong”.'),
       h('p', {}, 'The learner redoes every △ and ○ item until it is right, then you cross the mark out. Save the worksheet again with 0 and 0 and it becomes a star. A learner moves to the next worksheet only after a star.'),
       h('p', {}, 'Do not give answers or reteach. Ask guiding questions and point the learner back to an easier worksheet.')),
     sec('daily', 'Every day (Today tab)',
-      h('ol', {}, h('li', {}, 'Open Today and pick the date and subject.'), h('li', {}, 'For Reading: tap a learner, choose Basic or Plus (Grade 4 and up), then the week and session you taught. There are no marks for reading sessions, only present or absent. In Key Stage 1, choose Progress Check-in on the day you give it and enter the totals from the scoring sheet.'), h('li', {}, 'Tap a learner. Set the worksheet number (it starts at the next one).'), h('li', {}, 'Set △ and ○ from your checking. Tap Save worksheet, or Absent.'))),
+      h('ol', {}, h('li', {}, 'Open Today and pick the date and subject.'), h('li', {}, 'For Reading: tap a learner, choose Basic or Plus (Grade 4 and up), then the week and session you taught. The marks are optional: if you type the score of the LAS the learner did in Let\u2019s Check (items in the LAS and items correct), the app sets the mark for you and keeps the learner\u2019s LAS average. In Key Stage 1, choose Progress Check-in on the day you give it and enter the totals from the scoring sheet.'), h('li', {}, 'Tap a learner. Set the worksheet number (it starts at the next one).'), h('li', {}, 'Set △ and ○ from your checking. Tap Save worksheet, or Absent.'))),
     sec('tests', 'Pretest and posttest',
       h('p', {}, 'Do the Pretest at the start and the Posttest at the end of the program. The app opens on Posttest from December 1. You can switch at the top of Learners.'),
       h('p', {}, h('strong', {}, 'Numeracy: '), 'Tap a learner, then Numeracy. Choose a lower level for a learner who is behind. The learner answers on the phone, or you type answers from paper. A ○ in the result means review that item. Correct answers are not shown so the posttest stays fair.'),
