@@ -1388,6 +1388,7 @@ function readStripEl(lid) {
   return h('div', { class: 'strip', 'aria-label': 'Recent reading sessions' }, h('span', {}, 'Recent:'), e.map(t => (ciOf(t) ? h('span', { class: 'sym ci', title: 'Progress Check-in ' + ciOf(t) }, 'CI' + ciOf(t)) : h('span', { class: 'sym ' + (Number(t.circ) ? 'circ' : Number(t.tri) ? 'tri' : 'star'), title: readLabel(t) }, Number(t.circ) ? '\u25CB' : Number(t.tri) ? '\u25B3' : '\u2605'))));
 }
 function readChip(mine) { const les = mine.filter(t => !Number(t.absent) && !ciOf(t)); if (!les.length) return 'Check-in'; const t = les[les.length - 1]; return Number(t.circ) ? '\u25CB Not yet' : Number(t.tri) ? '\u25B3 Needed help' : '\u2605 Did well'; }
+const setName = g => (g === 7 ? 'Grades 7 and 8' : g === 9 ? 'Grades 9 and 10' : 'Grade ' + g);
 const wsLabel = t => (t.domain === 'math' ? setLabel(entrySet(t) || 1) + ' WS ' + t.worksheet : readLabel(t));
 function lastEntry(lid, dom, set) { const e = D().tracker.filter(t => t.learner_id === lid && t.domain === dom && !Number(t.absent) && (set == null || (entrySet(t) || 1) === set)).sort((a, b) => (a.date + a.created_at < b.date + b.created_at ? -1 : 1)); return e[e.length - 1]; }
 function scrSession() {
@@ -1430,12 +1431,14 @@ function sessionPanel(l, date) {
     if (!prev.length) { tries.append(h('span', {}, 'First try on this worksheet.')); return; }
     tries.append(h('strong', {}, n ? 'Redo round ' + n + ' (counted automatically)' : 'This worksheet was already \u2605 perfect'), h('ul', {}, prev.map((t, i) => h('li', {}, 'Try ' + (i + 1) + ', ' + t.date + ': ' + (Number(t.tri) || Number(t.circ) ? t.tri + ' \u25B3, ' + t.circ + ' \u25CB' : '\u2605 perfect')))));
   };
-  const showWs = () => { showTries(); wsNum.textContent = ws; const t = math && WS_TITLES[setG] ? WS_TITLES[setG][ws] : ''; wsTitle.textContent = t || ''; wsTitle.hidden = !t; };
+  const setNote = h('p', { class: 'hint', id: 'setNote' });
+  const updSetNote = () => { const def = canonSet(Math.min(Number(l.grade) || 1, 10)); setNote.hidden = !math || setG === def; setNote.textContent = !setNote.hidden ? l.name.split(' ')[0] + ' is in Grade ' + l.grade + ' and is using the ' + setName(setG) + ' worksheets.' : ''; };
+  const showWs = () => { updSetNote(); showTries(); wsNum.textContent = ws; const t = math && WS_TITLES[setG] ? WS_TITLES[setG][ws] : ''; wsTitle.textContent = t || ''; wsTitle.hidden = !t; };
   const wsRow = h('div', { class: 'stepper' }, h('span', {}, 'Worksheet no.'), h('button', { class: 'btn', 'aria-label': 'Previous worksheet', onclick: () => { ws = Math.max(1, ws - 1); showWs(); } }, '−'), wsNum, h('button', { class: 'btn', 'aria-label': 'Next worksheet', onclick: () => { ws = Math.min(maxWs(), ws + 1); showWs(); } }, '+'));
   showWs();
-  const setSel = math ? h('label', { class: 'fld' }, h('span', {}, 'Worksheet set (ARAL Math)'), h('select', { id: 'wsSet', onchange: e => { setG = Number(e.target.value); ws = Math.min(nextWs(), maxWs()); showWs(); } }, [1, 2, 3, 4, 5, 6, 7, 9].map(g => h('option', { value: g, selected: g === setG }, g === 7 ? 'Grades 7 and 8' : g === 9 ? 'Grades 9 and 10' : 'Grade ' + g)))) : null;
+  const setSel = math ? h('label', { class: 'fld' }, h('span', {}, 'Worksheet set the learner is using (not the learner\u2019s grade)'), h('select', { id: 'wsSet', onchange: e => { setG = Number(e.target.value); ws = Math.min(nextWs(), maxWs()); showWs(); } }, [1, 2, 3, 4, 5, 6, 7, 9].map(g => h('option', { value: g, selected: g === setG }, g === 7 ? 'Grades 7 and 8' : g === 9 ? 'Grades 9 and 10' : 'Grade ' + g)))) : null;
   const mk = absent => addOp('tracker', { entry_id: uid(), learner_id: l.id, tutor_id: P.session.tutor_id, date, domain: dom, worksheet: absent ? '' : ws, tri: absent ? 0 : tri, circ: absent ? 0 : circ, retries: absent ? 0 : redoCount(earlierTries(l.id, dom, math ? setG : 1, ws)), absent: absent ? 1 : 0, note: math ? 'set:G' + setG : '', created_at: new Date().toISOString() });
-  return h('div', { class: 'spanel' }, startHint(l), setSel, wsRow, wsTitle, val(() => tri, v => { tri = v; }, 0, 99, '△ partly correct'), val(() => circ, v => { circ = v; }, 0, 99, '○ wrong'), tries, status,
+  return h('div', { class: 'spanel' }, startHint(l), setSel, setNote, wsRow, wsTitle, val(() => tri, v => { tri = v; }, 0, 99, '△ partly correct'), val(() => circ, v => { circ = v; }, 0, 99, '○ wrong'), tries, status,
     h('div', { class: 'two' }, h('button', { class: 'btn', onclick: () => { mk(true); S.openRow = null; render(); toast(l.name + ' marked absent'); } }, 'Absent'), h('button', { class: 'btn primary', onclick: () => { mk(false); S.openRow = null; render(); toast('Saved worksheet ' + ws); } }, 'Save worksheet')));
 }
 
@@ -1450,7 +1453,9 @@ function sheetGroupLog(date) {
   const guessWs = () => { const c = {}; L.forEach(l => { const le = lastEntry(l.id, dom, math ? setG : null); const n = le ? (Number(le.tri) || Number(le.circ) ? Number(le.worksheet) : Number(le.worksheet) + 1) : 1; c[n] = (c[n] || 0) + 1; }); return Math.min(Number(Object.keys(c).sort((a, b) => c[b] - c[a])[0]), maxWs()); };
   let ws = guessWs(); const rows = L.map(l => ({ l, st: 'skip', tri: 0, circ: 0 }));
   const wsNum = h('strong', {}, String(ws)); const wsTitle = h('div', { class: 'wstitle' }); const list = h('div', { class: 'glist' }); const msg = h('p', { class: 'err', role: 'alert' });
-  const showWs = () => { wsNum.textContent = ws; const t = math && WS_TITLES[setG] ? WS_TITLES[setG][ws] : ''; wsTitle.textContent = t || ''; wsTitle.hidden = !t; };
+  const setNote = h('p', { class: 'hint', id: 'gSetNote' });
+  const updSetNote = () => { const off = math ? L.filter(l => canonSet(Math.min(Number(l.grade) || 1, 10)) !== setG) : []; setNote.hidden = !off.length; setNote.textContent = off.length ? off.length + ' of ' + L.length + ' learners are in a different grade from the ' + setName(setG) + ' worksheets: ' + off.slice(0, 3).map(l => l.name.split(' ')[0] + ' (Gr ' + l.grade + ')').join(', ') + (off.length > 3 ? ' and ' + (off.length - 3) + ' more.' : '.') : ''; };
+  const showWs = () => { updSetNote(); wsNum.textContent = ws; const t = math && WS_TITLES[setG] ? WS_TITLES[setG][ws] : ''; wsTitle.textContent = t || ''; wsTitle.hidden = !t; };
   const counts = () => { const c = { perfect: 0, redo: 0, absent: 0, skip: 0 }; rows.forEach(r => { c[r.st]++; }); return c; };
   const sum = h('p', { class: 'sub' });
   const draw = () => {
@@ -1463,11 +1468,11 @@ function sheetGroupLog(date) {
     const c = counts(); sum.textContent = c.perfect + ' perfect · ' + c.redo + ' need redo · ' + c.absent + ' absent · ' + c.skip + ' skipped';
   };
   const setAll = st => { rows.forEach(r => { r.st = st; }); draw(); };
-  const setSel = math ? h('label', { class: 'fld' }, h('span', {}, 'Worksheet set (ARAL Math)'), h('select', { id: 'gSet', onchange: e => { setG = Number(e.target.value); ws = guessWs(); showWs(); } }, [1, 2, 3, 4, 5, 6, 7, 9].map(g => h('option', { value: g, selected: g === setG }, g === 7 ? 'Grades 7 and 8' : g === 9 ? 'Grades 9 and 10' : 'Grade ' + g)))) : null;
+  const setSel = math ? h('label', { class: 'fld' }, h('span', {}, 'Worksheet set the group is using (not the learners\u2019 grade)'), h('select', { id: 'gSet', onchange: e => { setG = Number(e.target.value); ws = guessWs(); showWs(); } }, [1, 2, 3, 4, 5, 6, 7, 9].map(g => h('option', { value: g, selected: g === setG }, g === 7 ? 'Grades 7 and 8' : g === 9 ? 'Grades 9 and 10' : 'Grade ' + g)))) : null;
   const wsRow = h('div', { class: 'stepper' }, h('span', {}, 'Worksheet no.'), h('button', { class: 'btn', 'aria-label': 'Previous worksheet', onclick: () => { ws = Math.max(1, ws - 1); showWs(); } }, '−'), wsNum, h('button', { class: 'btn', 'aria-label': 'Next worksheet', onclick: () => { ws = Math.min(maxWs(), ws + 1); showWs(); } }, '+'));
   showWs(); draw();
   openSheet(h('div', { class: 'stack' }, h('h2', {}, 'Log the whole group'), h('p', { class: 'sub' }, (math ? 'Math' : 'Reading') + ' · ' + date + '. Same worksheet for everyone. Set the learners who need a redo or were absent.'),
-    setSel, wsRow, wsTitle, h('div', { class: 'two' }, h('button', { class: 'btn', id: 'gAllStar', onclick: () => setAll('perfect') }, '★ Everyone perfect'), h('button', { class: 'btn', onclick: () => setAll('skip') }, 'Clear all')), list, sum, msg,
+    setSel, setNote, wsRow, wsTitle, h('div', { class: 'two' }, h('button', { class: 'btn', id: 'gAllStar', onclick: () => setAll('perfect') }, '★ Everyone perfect'), h('button', { class: 'btn', onclick: () => setAll('skip') }, 'Clear all')), list, sum, msg,
     h('button', { class: 'btn primary wide', id: 'gSave', onclick: () => {
       msg.textContent = ''; const c = counts(); if (c.perfect + c.redo + c.absent === 0) { msg.textContent = 'Choose a result for at least one learner.'; return; }
       if (rows.some(r => r.st === 'redo' && !r.tri && !r.circ)) { msg.textContent = 'For “Needs redo”, enter how many △ or ○ the learner has.'; return; }
